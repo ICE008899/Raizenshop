@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Raizenshop | หน้าหลัก</title>
+    <title>กล่องข้อความ | RaizenSHOP</title>
     <link rel="stylesheet" href="index.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="Inbox.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Kanit:wght@300;400;500&display=swap" rel="stylesheet">
 </head>
 <body>
     <nav class="navbar">
@@ -13,134 +14,81 @@
             <h2>Raizen<span>SHOP</span></h2>
         </div>
         <div class="user-menu">
-            <div class="wallet">
-                <span id="user-balance">💰 ยอดเงิน: 0.00 ฿</span>
-            </div>
-            
-            <button id="admin-btn" class="btn-admin" style="display:none;" onclick="window.location.href='/Admin.html'">⚙️ จัดการระบบ</button>
-
-            <button class="btn-inbox" onclick="window.location.href='/Inbox.html'" style="background: #00c6ff; color: #000; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-right: 5px;">📥 กล่องข้อความ</button>
-
-            <button class="btn-history" onclick="window.location.href='/History.html'">📜 ประวัติการซื้อ</button>
-            <button class="btn-topup" onclick="window.location.href='/Topup.html'">เติมเงิน</button>
-            <button class="btn-Contact" onclick="window.location.href='/Contact.html'">ติดต่อสอบถาม</button>
-            <button class="btn-logout" onclick="logout()">Logout</button>
+            <span id="user-display" style="margin-right: 15px; color: #ccc;"></span>
+            <button class="btn-history" onclick="window.location.href='/index.html'">🏠 กลับหน้าหลัก</button>
         </div>
     </nav>
 
-    <div class="main-container">
-        <h1 class="page-title">RAIZENSHOP CMD</h1>
+    <div class="inbox-wrapper">
+        <h1 class="page-title" style="text-align: left; margin-bottom: 30px;">📥 กล่องข้อความของคุณ</h1>
         
-        <div id="product-display" class="product-grid">
-            <p style="color: #888; text-align: center; width: 100%;">กำลังโหลดสินค้า...</p>
+        <div id="inbox-container">
+            <p style="text-align: center; color: #888;">กำลังโหลดข้อความ...</p>
         </div>
     </div>
 
     <script>
-        // ✨ ดึงข้อมูล User และ Email จาก LocalStorage
+        // 1. ตรวจสอบว่าเข้าสู่ระบบหรือยัง
         const currentUser = localStorage.getItem('loggedInUser');
-        const userEmail = localStorage.getItem('userEmail'); // ดึง Email มาใช้
-        const userRole = localStorage.getItem('userRole');
-
-        // ตรวจสอบว่ามี Email ไหม (ถ้าไม่มี แสดงว่า Login ด้วยระบบเก่า ให้ Logout ก่อน)
-        if (currentUser && userEmail) {
-            
-            // ✨ 1. เช็คยอดเงินโดยใช้ Email
-            fetch(`/api/balance?email=${userEmail}`)
-                .then(response => response.json())
-                .then(data => {
-                    // แสดงยอดเงินแบบมีลูกน้ำและทศนิยม 2 ตำแหน่ง
-                    document.getElementById('user-balance').innerText = '💰 ยอดเงิน: ' + parseFloat(data.balance).toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ฿';
-                })
-                .catch(error => console.error('เกิดข้อผิดพลาดในการดึงยอดเงิน:', error));
-
-            if (userRole === 'admin') {
-                document.getElementById('admin-btn').style.display = 'inline-block';
-            }
-            
-            // เรียกใช้งานฟังก์ชันโหลดสินค้าจากฐานข้อมูล
-            loadProducts();
-
-        } else {
-            // ถ้าข้อมูลไม่ครบ ให้ไปหน้า Login ใหม่
-            alert('กรุณาล็อกอินใหม่เพื่ออัปเดตข้อมูลบัญชีครับ');
+        
+        if (!currentUser) {
+            alert('กรุณาล็อกอินก่อนเข้าสู่กล่องข้อความครับ');
             window.location.href = '/Login.html';
+        } else {
+            document.getElementById('user-display').innerText = '👤 ผู้ใช้: ' + currentUser;
+            loadInboxMessages();
         }
 
-        // ฟังก์ชันโหลดสินค้าทั้งหมดมาแสดงผล
-        function loadProducts() {
-            fetch('/api/products') 
+        // 2. ฟังก์ชันดึงข้อมูลข้อความจาก Server
+        function loadInboxMessages() {
+            fetch(`/api/user/messages?username=${currentUser}`)
                 .then(res => res.json())
                 .then(data => {
-                    const display = document.getElementById('product-display');
-                    if (data.length === 0) {
-                        display.innerHTML = '<p style="color: #666; text-align: center; width: 100%;">ยังไม่มีสินค้าในร้านขณะนี้</p>';
+                    const container = document.getElementById('inbox-container');
+                    
+                    if(data.length === 0) {
+                        container.innerHTML = `
+                            <div style="text-align: center; padding: 50px; background: #1e1e1e; border-radius: 12px;">
+                                <h3 style="color: #666;">ยังไม่มีข้อความในกล่องจดหมายของคุณ</h3>
+                                <p style="color: #444; margin-top: 10px;">หากมีปัญหาการใช้งาน สามารถกดติดต่อแอดมินได้ที่หน้าหลักครับ</p>
+                            </div>
+                        `;
                         return;
                     }
 
-                    // สร้างการ์ดสินค้าตามข้อมูลที่มีในฐานข้อมูล
-                    display.innerHTML = data.map(product => `
-                        <div class="card">
-                            <div class="card-image-wrapper">
-                                <img src="${product.image_url || 'img/default.jpg'}" alt="product-image" class="card-image">
-                            </div>
-                            <div class="card-content">
-                                <h3>${product.name}</h3>
-                                <p class="price">฿ ${parseFloat(product.price).toFixed(2)}</p>
-                                <p style="font-size: 0.8rem; color: ${product.stock > 0 ? '#00ff00' : '#ff4d4d'}; margin-bottom: 10px;">
-                                    คงเหลือ: ${product.stock} ชิ้น
-                                </p>
-                                <div class="card-actions">
-                                    <button class="btn-detail">รายละเอียด</button>
-                                    <button class="btn-buy" 
-                                            ${product.stock > 0 ? `onclick="buyProduct(${product.id})"` : 'disabled style="background: #444; opacity: 0.6;"'}>
-                                            ${product.stock > 0 ? 'ซื้อเลย' : 'สินค้าหมด'}
-                                    </button>
+                    // สร้างกล่องข้อความ
+                    container.innerHTML = data.map(msg => {
+                        const isReplied = msg.status === 'replied';
+                        
+                        return `
+                            <div class="inbox-card" style="${isReplied ? 'border-left-color: #00ff00;' : ''}">
+                                <div class="inbox-header">
+                                    <h3>🏷️ หัวข้อ: ${msg.subject}</h3>
+                                    <span class="status-badge ${isReplied ? 'status-replied' : 'status-pending'}">
+                                        ${isReplied ? '✅ ตอบกลับแล้ว' : '⏳ รอแอดมินตอบกลับ'}
+                                    </span>
                                 </div>
+                                <p class="msg-date">ส่งเมื่อ: ${new Date(msg.sent_at).toLocaleString('th-TH')}</p>
+                                
+                                <div class="msg-body">
+                                    <p style="color: #bbb; font-size: 0.9rem; margin-bottom: 5px;">ข้อความของคุณ:</p>
+                                    <p style="color: #fff;">${msg.message}</p>
+                                </div>
+                                
+                                ${isReplied ? `
+                                <div class="msg-reply">
+                                    <h4>👨‍💻 แอดมินตอบกลับ:</h4>
+                                    <p style="color: #e0e0e0;">${msg.admin_reply}</p>
+                                </div>
+                                ` : ''}
                             </div>
-                        </div>
-                    `).join('');
+                        `;
+                    }).join('');
                 })
-                .catch(error => {
-                    console.error('Error:', error);
-                    document.getElementById('product-display').innerHTML = '<p style="color: red;">ไม่สามารถโหลดข้อมูลสินค้าได้</p>';
+                .catch(err => {
+                    console.error("Error fetching messages:", err);
+                    document.getElementById('inbox-container').innerHTML = '<p style="color: red; text-align: center;">ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้</p>';
                 });
-        }
-
-        // ✨ ฟังก์ชันซื้อสินค้า (แก้ให้ใช้ Email ตัดเงิน)
-        function buyProduct(productId) {
-            if (!userEmail) return; // ถ้าไม่มี Email ไม่ให้ซื้อ
-
-            if (confirm('ยืนยันการซื้อสินค้าชิ้นนี้ใช่หรือไม่?')) {
-                // เปลี่ยนการส่งข้อมูลเป็น JSON เพื่อความทันสมัยและรองรับภาษาไทยได้ดีกว่า
-                fetch('/api/buy-product', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        email: userEmail, // ส่ง Email ไปแทน Username
-                        productId: productId 
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('🎉 ' + data.message);
-                        location.reload(); 
-                    } else {
-                        alert('❌ ' + data.message);
-                    }
-                })
-                .catch(error => console.error('Error:', error));
-            }
-        }
-
-        function logout() {
-            if(confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
-                localStorage.removeItem('loggedInUser');
-                localStorage.removeItem('userEmail'); // ลบ Email ออกด้วย
-                localStorage.removeItem('userRole');
-                window.location.href = '/Login.html';
-            }
         }
     </script>
 </body>
