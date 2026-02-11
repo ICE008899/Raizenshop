@@ -16,12 +16,14 @@ app.use('/uploads', express.static('uploads'));
 
 const upload = multer({ dest: 'uploads/' });
 
-// 1. เชื่อมต่อฐานข้อมูล
+// // 1. เชื่อมต่อฐานข้อมูล Cloud (Aiven MySQL)
 const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'godshop'
+    host: 'raizenshop-db-raizenshop-db.e.aivencloud.com', // จากช่อง Host
+    port: 20635,                                          // จากช่อง Port
+    user: 'avnadmin',                                     // จากช่อง User
+    password: 'AVNS_D61Ll7j_RDGKzGYEG2N', // จากช่อง Password
+    database: 'defaultdb',                                // จากช่อง Database name
+    ssl: { rejectUnauthorized: false }                     // ✨ ต้องมีบรรทัดนี้เพื่อความปลอดภัย
 });
 
 db.connect((err) => {
@@ -261,5 +263,6 @@ app.post('/api/admin/reply-message', isAdmin, (req, res) => {
         res.json({ success: true, message: 'ส่งการตอบกลับเรียบร้อยแล้ว!' });
     });
 });
+
 
 app.listen(3000, () => console.log('🚀 RaizenSHOP Server is running on http://localhost:3000'));
