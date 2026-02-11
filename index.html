@@ -37,17 +37,22 @@
     </div>
 
     <script>
+        // ✨ ดึงข้อมูล User และ Email จาก LocalStorage
         const currentUser = localStorage.getItem('loggedInUser');
+        const userEmail = localStorage.getItem('userEmail'); // ดึง Email มาใช้
         const userRole = localStorage.getItem('userRole');
 
-        if (currentUser) {
-            // เช็คยอดเงิน
-            fetch('/api/balance?username=' + currentUser)
+        // ตรวจสอบว่ามี Email ไหม (ถ้าไม่มี แสดงว่า Login ด้วยระบบเก่า ให้ Logout ก่อน)
+        if (currentUser && userEmail) {
+            
+            // ✨ 1. เช็คยอดเงินโดยใช้ Email
+            fetch(`/api/balance?email=${userEmail}`)
                 .then(response => response.json())
                 .then(data => {
-                    document.getElementById('user-balance').innerText = '💰 ยอดเงิน: ' + data.balance + ' ฿';
+                    // แสดงยอดเงินแบบมีลูกน้ำและทศนิยม 2 ตำแหน่ง
+                    document.getElementById('user-balance').innerText = '💰 ยอดเงิน: ' + parseFloat(data.balance).toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ฿';
                 })
-                .catch(error => console.error('เกิดข้อผิดพลาด:', error));
+                .catch(error => console.error('เกิดข้อผิดพลาดในการดึงยอดเงิน:', error));
 
             if (userRole === 'admin') {
                 document.getElementById('admin-btn').style.display = 'inline-block';
@@ -57,13 +62,14 @@
             loadProducts();
 
         } else {
-            alert('กรุณาล็อกอินก่อนเข้าสู่ระบบครับ');
+            // ถ้าข้อมูลไม่ครบ ให้ไปหน้า Login ใหม่
+            alert('กรุณาล็อกอินใหม่เพื่ออัปเดตข้อมูลบัญชีครับ');
             window.location.href = '/Login.html';
         }
 
         // ฟังก์ชันโหลดสินค้าทั้งหมดมาแสดงผล
         function loadProducts() {
-            fetch('/api/products') // ดึงข้อมูลจาก API ที่เราสร้างไว้ใน server.js
+            fetch('/api/products') 
                 .then(res => res.json())
                 .then(data => {
                     const display = document.getElementById('product-display');
@@ -88,7 +94,7 @@
                                     <button class="btn-detail">รายละเอียด</button>
                                     <button class="btn-buy" 
                                             ${product.stock > 0 ? `onclick="buyProduct(${product.id})"` : 'disabled style="background: #444; opacity: 0.6;"'}>
-                                        ${product.stock > 0 ? 'ซื้อเลย' : 'สินค้าหมด'}
+                                            ${product.stock > 0 ? 'ซื้อเลย' : 'สินค้าหมด'}
                                     </button>
                                 </div>
                             </div>
@@ -101,19 +107,24 @@
                 });
         }
 
+        // ✨ ฟังก์ชันซื้อสินค้า (แก้ให้ใช้ Email ตัดเงิน)
         function buyProduct(productId) {
-            if (!currentUser) return;
+            if (!userEmail) return; // ถ้าไม่มี Email ไม่ให้ซื้อ
+
             if (confirm('ยืนยันการซื้อสินค้าชิ้นนี้ใช่หรือไม่?')) {
+                // เปลี่ยนการส่งข้อมูลเป็น JSON เพื่อความทันสมัยและรองรับภาษาไทยได้ดีกว่า
                 fetch('/api/buy-product', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `username=${currentUser}&productId=${productId}`
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        email: userEmail, // ส่ง Email ไปแทน Username
+                        productId: productId 
+                    })
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         alert('🎉 ' + data.message);
-                        // รีโหลดข้อมูลยอดเงินและสินค้าใหม่หลังซื้อสำเร็จ
                         location.reload(); 
                     } else {
                         alert('❌ ' + data.message);
@@ -126,6 +137,7 @@
         function logout() {
             if(confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
                 localStorage.removeItem('loggedInUser');
+                localStorage.removeItem('userEmail'); // ลบ Email ออกด้วย
                 localStorage.removeItem('userRole');
                 window.location.href = '/Login.html';
             }
