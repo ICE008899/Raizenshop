@@ -255,4 +255,6 @@ app.post('/api/admin/reply-message', isAdmin, (req, res) => {
 });
 
 // ✅ แก้ไข Port สำหรับ Render
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 RaizenSHOP Server is running on port ${PORT}`));
+
