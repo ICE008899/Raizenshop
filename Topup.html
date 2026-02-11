@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Topup | RaizenSHOP</title>
+    <link rel="stylesheet" href="Topup.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Kanit:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        /* สไตล์เสริมให้หน้าเติมเงินดูพรีเมียมขึ้น */
+        body { font-family: 'Poppins', 'Kanit', sans-serif; background: #121212; color: white; }
+        .topup-container { max-width: 500px; margin: 40px auto; padding: 20px; }
+        .logo h2 { text-align: center; margin-bottom: 20px; }
+        .logo span { color: #ffd700; }
+        .qr-instruction {
+            background: rgba(0, 198, 255, 0.1);
+            border: 1px dashed #00c6ff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            text-align: left;
+        }
+        .qr-instruction ul {
+            color: #ccc;
+            font-size: 0.85rem;
+            padding-left: 20px;
+            margin-top: 10px;
+            line-height: 1.6;
+        }
+        .input-group { margin-bottom: 20px; text-align: left; }
+        .input-group label { display: block; margin-bottom: 8px; color: #aaa; }
+        .qr-amount-box {
+            display: flex;
+            align-items: center;
+            background: #252525;
+            border-radius: 8px;
+            border: 1px solid #333;
+            overflow: hidden;
+        }
+        .qr-amount-box span {
+            background: #333;
+            padding: 14px 20px;
+            color: #ffd700;
+            font-weight: bold;
+        }
+        .qr-amount-box input {
+            border: none;
+            background: transparent;
+            padding: 14px;
+            color: white;
+            margin-bottom: 0;
+            flex: 1;
+            outline: none;
+        }
+        .btn-submit {
+            background: linear-gradient(135deg, #00c6ff, #0072ff); 
+            color: white; 
+            font-weight: bold; 
+            border: none; 
+            padding: 15px; 
+            width: 100%; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 1.1rem;
+            margin-top: 10px;
+            transition: 0.3s;
+        }
+        .btn-submit:hover { opacity: 0.9; transform: translateY(-2px); }
+        .btn-back {
+            background: transparent;
+            color: #aaa;
+            border: 1px solid #444;
+            padding: 12px;
+            width: 100%;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: 0.3s;
+        }
+        .btn-back:hover { background: #333; color: white; }
+    </style>
+</head>
+<body>
+    <div class="topup-container">
+        <div class="logo">
+            <h2>Raizen<span>SHOP</span></h2>
+        </div>
+
+        <div id="form-qr" style="background: #1e1e1e; padding: 30px; border-radius: 15px; border-top: 5px solid #00c6ff;">
+            <p class="subtitle" style="color: #00c6ff; font-size: 1.2rem; margin-bottom: 20px; text-align: center;">📱 เติมเงินผ่าน QR Code (รอตรวจสอบ)</p>
+            
+            <div class="qr-instruction">
+                <p style="color: #00c6ff; font-weight: bold;">💡 ขั้นตอนการเติมเงิน:</p>
+                <ul>
+                    <li>พิมพ์จำนวนเงินที่ต้องการโอน</li>
+                    <li>สแกนจ่ายผ่านแอปธนาคาร หรือ TrueMoney Wallet</li>
+                    <li>แนบรูปสลิปและกดยืนยัน</li>
+                </ul>
+            </div>
+
+            <form action="/topup-slip" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="username" class="username-field">
+                
+                <div class="input-group">
+                    <label>1. ระบุยอดเงินที่ต้องการเติม</label>
+                    <div class="qr-amount-box">
+                        <span>฿</span>
+                        <input type="number" id="qr-amount" name="amount" placeholder="เช่น 50, 150, 300" min="1" oninput="generateQR()" required>
+                    </div>
+                </div>
+
+                <div id="qr-display" style="display: none; text-align: center; margin: 25px 0; padding: 20px; background: #1a1a1a; border-radius: 12px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);">
+                    <p style="color: #fff; margin-bottom: 15px;">ยอดสแกนชำระ: <span id="show-amount" style="color: #00ff00; font-size: 1.2rem; font-weight: bold;"></span> บาท</p>
+                    <img id="qr-image" src="" alt="PromptPay QR Code" style="width: 220px; height: 220px; border-radius: 10px; border: 4px solid white; background: white; padding: 5px;">
+                    <p style="font-size: 0.8rem; color: #888; margin-top: 15px;">สแกนได้ทุกแอปธนาคาร และ TrueMoney</p>
+                </div>
+                
+                <div class="input-group">
+                    <label>2. อัปโหลดสลิปโอนเงิน (หลักฐาน)</label>
+                    <input type="file" name="slipImage" accept="image/*" required style="padding: 10px; background: #222; width: 100%; border-radius: 8px; border: 1px solid #333; color: white;">
+                </div>
+                
+                <button type="submit" class="btn-submit">✅ ยืนยันการเติมเงิน</button>
+                
+                <button type="button" class="btn-back" onclick="window.location.href='/index.html'">🏠 กลับหน้าหลัก</button>
+            </form>
+        </div>
+
+    </div>
+
+    <script>
+        const currentUser = localStorage.getItem('loggedInUser');
+        if (currentUser) {
+            document.querySelector('.username-field').value = currentUser;
+        } else {
+            alert('กรุณาล็อกอินก่อนใช้งานระบบเติมเงินครับ');
+            window.location.href = '/Login.html';
+        }
+
+        function generateQR() {
+            const amount = document.getElementById('qr-amount').value;
+            const promptpayNumber = "0653846786"; // เบอร์พร้อมเพย์ของคุณ
+            
+            if (amount > 0) {
+                document.getElementById('show-amount').innerText = amount;
+                document.getElementById('qr-image').src = `https://promptpay.io/${promptpayNumber}/${amount}.png`;
+                document.getElementById('qr-display').style.display = 'block';
+            } else {
+                document.getElementById('qr-display').style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

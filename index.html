@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raizenshop | หน้าหลัก</title>
+    <link rel="stylesheet" href="index.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">
+            <h2>Raizen<span>SHOP</span></h2>
+        </div>
+        <div class="user-menu">
+            <div class="wallet">
+                <span id="user-balance">💰 ยอดเงิน: 0.00 ฿</span>
+            </div>
+            
+            <button id="admin-btn" class="btn-admin" style="display:none;" onclick="window.location.href='/Admin.html'">⚙️ จัดการระบบ</button>
+
+            <button class="btn-inbox" onclick="window.location.href='/Inbox.html'" style="background: #00c6ff; color: #000; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-right: 5px;">📥 กล่องข้อความ</button>
+
+            <button class="btn-history" onclick="window.location.href='/History.html'">📜 ประวัติการซื้อ</button>
+            <button class="btn-topup" onclick="window.location.href='/Topup.html'">เติมเงิน</button>
+            <button class="btn-Contact" onclick="window.location.href='/Contact.html'">ติดต่อสอบถาม</button>
+            <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <h1 class="page-title">RAIZENSHOP CMD</h1>
+        
+        <div id="product-display" class="product-grid">
+            <p style="color: #888; text-align: center; width: 100%;">กำลังโหลดสินค้า...</p>
+        </div>
+    </div>
+
+    <script>
+        const currentUser = localStorage.getItem('loggedInUser');
+        const userRole = localStorage.getItem('userRole');
+
+        if (currentUser) {
+            // เช็คยอดเงิน
+            fetch('/api/balance?username=' + currentUser)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('user-balance').innerText = '💰 ยอดเงิน: ' + data.balance + ' ฿';
+                })
+                .catch(error => console.error('เกิดข้อผิดพลาด:', error));
+
+            if (userRole === 'admin') {
+                document.getElementById('admin-btn').style.display = 'inline-block';
+            }
+            
+            // เรียกใช้งานฟังก์ชันโหลดสินค้าจากฐานข้อมูล
+            loadProducts();
+
+        } else {
+            alert('กรุณาล็อกอินก่อนเข้าสู่ระบบครับ');
+            window.location.href = '/Login.html';
+        }
+
+        // ฟังก์ชันโหลดสินค้าทั้งหมดมาแสดงผล
+        function loadProducts() {
+            fetch('/api/products') // ดึงข้อมูลจาก API ที่เราสร้างไว้ใน server.js
+                .then(res => res.json())
+                .then(data => {
+                    const display = document.getElementById('product-display');
+                    if (data.length === 0) {
+                        display.innerHTML = '<p style="color: #666; text-align: center; width: 100%;">ยังไม่มีสินค้าในร้านขณะนี้</p>';
+                        return;
+                    }
+
+                    // สร้างการ์ดสินค้าตามข้อมูลที่มีในฐานข้อมูล
+                    display.innerHTML = data.map(product => `
+                        <div class="card">
+                            <div class="card-image-wrapper">
+                                <img src="${product.image_url || 'img/default.jpg'}" alt="product-image" class="card-image">
+                            </div>
+                            <div class="card-content">
+                                <h3>${product.name}</h3>
+                                <p class="price">฿ ${parseFloat(product.price).toFixed(2)}</p>
+                                <p style="font-size: 0.8rem; color: ${product.stock > 0 ? '#00ff00' : '#ff4d4d'}; margin-bottom: 10px;">
+                                    คงเหลือ: ${product.stock} ชิ้น
+                                </p>
+                                <div class="card-actions">
+                                    <button class="btn-detail">รายละเอียด</button>
+                                    <button class="btn-buy" 
+                                            ${product.stock > 0 ? `onclick="buyProduct(${product.id})"` : 'disabled style="background: #444; opacity: 0.6;"'}>
+                                        ${product.stock > 0 ? 'ซื้อเลย' : 'สินค้าหมด'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('product-display').innerHTML = '<p style="color: red;">ไม่สามารถโหลดข้อมูลสินค้าได้</p>';
+                });
+        }
+
+        function buyProduct(productId) {
+            if (!currentUser) return;
+            if (confirm('ยืนยันการซื้อสินค้าชิ้นนี้ใช่หรือไม่?')) {
+                fetch('/api/buy-product', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `username=${currentUser}&productId=${productId}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('🎉 ' + data.message);
+                        // รีโหลดข้อมูลยอดเงินและสินค้าใหม่หลังซื้อสำเร็จ
+                        location.reload(); 
+                    } else {
+                        alert('❌ ' + data.message);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        }
+
+        function logout() {
+            if(confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
+                localStorage.removeItem('loggedInUser');
+                localStorage.removeItem('userRole');
+                window.location.href = '/Login.html';
+            }
+        }
+    </script>
+</body>
+</html>

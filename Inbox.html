@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>กล่องข้อความ | RaizenSHOP</title>
+    <link rel="stylesheet" href="index.css">
+    <link rel="stylesheet" href="Inbox.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Kanit:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">
+            <h2>Raizen<span>SHOP</span></h2>
+        </div>
+        <div class="user-menu">
+            <span id="user-display" style="margin-right: 15px; color: #ccc;"></span>
+            <button class="btn-history" onclick="window.location.href='/index.html'">🏠 กลับหน้าหลัก</button>
+        </div>
+    </nav>
+
+    <div class="inbox-wrapper">
+        <h1 class="page-title" style="text-align: left; margin-bottom: 30px;">📥 กล่องข้อความของคุณ</h1>
+        
+        <div id="inbox-container">
+            <p style="text-align: center; color: #888;">กำลังโหลดข้อความ...</p>
+        </div>
+    </div>
+
+    <script>
+        // 1. ตรวจสอบว่าเข้าสู่ระบบหรือยัง
+        const currentUser = localStorage.getItem('loggedInUser');
+        
+        if (!currentUser) {
+            alert('กรุณาล็อกอินก่อนเข้าสู่กล่องข้อความครับ');
+            window.location.href = '/Login.html';
+        } else {
+            document.getElementById('user-display').innerText = '👤 ผู้ใช้: ' + currentUser;
+            loadInboxMessages();
+        }
+
+        // 2. ฟังก์ชันดึงข้อมูลข้อความจาก Server
+        function loadInboxMessages() {
+            fetch(`/api/user/messages?username=${currentUser}`)
+                .then(res => res.json())
+                .then(data => {
+                    const container = document.getElementById('inbox-container');
+                    
+                    if(data.length === 0) {
+                        container.innerHTML = `
+                            <div style="text-align: center; padding: 50px; background: #1e1e1e; border-radius: 12px;">
+                                <h3 style="color: #666;">ยังไม่มีข้อความในกล่องจดหมายของคุณ</h3>
+                                <p style="color: #444; margin-top: 10px;">หากมีปัญหาการใช้งาน สามารถกดติดต่อแอดมินได้ที่หน้าหลักครับ</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    // สร้างกล่องข้อความ
+                    container.innerHTML = data.map(msg => {
+                        const isReplied = msg.status === 'replied';
+                        
+                        return `
+                            <div class="inbox-card" style="${isReplied ? 'border-left-color: #00ff00;' : ''}">
+                                <div class="inbox-header">
+                                    <h3>🏷️ หัวข้อ: ${msg.subject}</h3>
+                                    <span class="status-badge ${isReplied ? 'status-replied' : 'status-pending'}">
+                                        ${isReplied ? '✅ ตอบกลับแล้ว' : '⏳ รอแอดมินตอบกลับ'}
+                                    </span>
+                                </div>
+                                <p class="msg-date">ส่งเมื่อ: ${new Date(msg.sent_at).toLocaleString('th-TH')}</p>
+                                
+                                <div class="msg-body">
+                                    <p style="color: #bbb; font-size: 0.9rem; margin-bottom: 5px;">ข้อความของคุณ:</p>
+                                    <p style="color: #fff;">${msg.message}</p>
+                                </div>
+                                
+                                ${isReplied ? `
+                                <div class="msg-reply">
+                                    <h4>👨‍💻 แอดมินตอบกลับ:</h4>
+                                    <p style="color: #e0e0e0;">${msg.admin_reply}</p>
+                                </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    }).join('');
+                })
+                .catch(err => {
+                    console.error("Error fetching messages:", err);
+                    document.getElementById('inbox-container').innerHTML = '<p style="color: red; text-align: center;">ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้</p>';
+                });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact | RaizenSHOP</title>
+    <link rel="stylesheet" href="Contact.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="contact-container">
+        <div class="logo">
+            <h2>Raizen<span>SHOP</span></h2>
+        </div>
+        <p class="subtitle">ติดต่อสอบถาม / แจ้งปัญหาการใช้งาน</p>
+
+        <div class="contact-cards">
+            <a href="https://www.facebook.com/whiteshark.lamoonboy" class="social-card fb-card">
+                <div class="icon">📘</div>
+                <h3>Facebook Page</h3>
+                <p>ตอบไวใน 5 นาที</p>
+            </a>
+            <a href="https://discord.gg/we7yFCPrHq" class="social-card dc-card">
+                <div class="icon">🎧</div>
+                <h3>Discord Server</h3>
+                <p>พูดคุย / แจ้งปัญหา</p>
+            </a>
+        </div>
+
+        <div class="divider">
+            <span>หรือส่งข้อความหาเราโดยตรง</span>
+        </div>
+
+        <form action="/send-message" method="POST">
+            <input type="hidden" name="username" class="username-field">
+
+            <div class="input-group">
+                <label>หัวข้อที่ต้องการติดต่อ</label>
+                <select name="subject" required>
+                    <option value="" disabled selected>-- เลือกหัวข้อ --</option>
+                    <option value="topup_issue">ปัญหาการเติมเงิน</option>
+                    <option value="product_issue">สินค้ามีปัญหา / ใช้งานไม่ได้</option>
+                    <option value="other">สอบถามเรื่องอื่นๆ</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label>รายละเอียด</label>
+                <textarea name="message" rows="4" placeholder="พิมพ์ข้อความของคุณที่นี่..." required></textarea>
+            </div>
+
+            <button type="submit" class="btn-submit">ส่งข้อความ</button>
+            <button type="button" class="btn-back" onclick="window.location.href='/index.html'">กลับหน้าหลัก</button>
+        </form>
+    </div>
+
+    <script>
+        const currentUser = localStorage.getItem('loggedInUser');
+        if (currentUser) {
+            document.querySelector('.username-field').value = currentUser;
+        } else {
+            alert('กรุณาล็อกอินก่อนใช้งานหน้าติดต่อครับ');
+            window.location.href = '/Login.html';
+        }
+    </script>
+</body>
+</html>

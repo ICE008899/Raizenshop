@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order History | RaizenSHOP</title>
+    <link rel="stylesheet" href="History.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="history-container">
+        <div class="logo"><h2>Raizen<span>SHOP</span></h2></div>
+        <p class="subtitle">ประวัติการสั่งซื้อสินค้าของคุณ</p>
+
+        <div id="history-list">
+            <p style="color: #aaa;">กำลังโหลดข้อมูล...</p>
+        </div>
+
+        <button class="btn-back" onclick="window.location.href='/index.html'">กลับหน้าหลัก</button>
+    </div>
+
+    <script>
+        const currentUser = localStorage.getItem('loggedInUser');
+        if (!currentUser) window.location.href = '/Login.html';
+
+        // ดึงข้อมูลประวัติการซื้อ
+        fetch('/api/order-history?username=' + currentUser)
+            .then(res => res.json())
+            .then(orders => {
+                const list = document.getElementById('history-list');
+                if (orders.length === 0) {
+                    list.innerHTML = '<p style="color: #888; margin: 20px 0;">ยังไม่มีประวัติการซื้อสินค้า</p>';
+                    return;
+                }
+
+                list.innerHTML = orders.map(order => `
+                    <div class="history-item">
+                        <div class="item-header">
+                            <span class="product-name">${order.product_name}</span>
+                            <span class="price">${order.product_price} ฿</span>
+                        </div>
+                        
+                        <div class="key-box">
+                            <label>รหัสสินค้า / คีย์:</label>
+                            <div class="input-wrapper">
+                                <input type="text" value="${order.product_key}" id="key-${order.id}" readonly>
+                                <button class="btn-copy" onclick="copyKey('key-${order.id}')">คัดลอก</button>
+                            </div>
+                        </div>
+
+                        ${order.download_url ? `
+                            <a href="${order.download_url}" target="_blank" class="btn-download">
+                                📥 ดาวน์โหลดไฟล์สินค้า
+                            </a>
+                        ` : ''}
+
+                        <div class="date">${new Date(order.purchase_date).toLocaleString('th-TH')}</div>
+                    </div>
+                `).join('');
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('history-list').innerHTML = '<p style="color: red;">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>';
+            });
+
+        // ✨ ฟังก์ชันก๊อปปี้คีย์
+        function copyKey(elementId) {
+            const copyText = document.getElementById(elementId);
+            copyText.select();
+            copyText.setSelectionRange(0, 99999); // สำหรับมือถือ
+            navigator.clipboard.writeText(copyText.value);
+            
+            alert("คัดลอกรหัสสินค้าแล้ว: " + copyText.value);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,216 @@
+/* --- Google Font --- */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Kanit:wght@300;400;500&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', 'Kanit', sans-serif;
+}
+
+body {
+    background: #0f0f0f; /* พื้นหลังเข้มขึ้นให้ดูพรีเมียม */
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+}
+
+.admin-container {
+    display: flex;
+    width: 100%;
+}
+
+/* --- Sidebar Style --- */
+.sidebar {
+    width: 280px;
+    background: #161616;
+    padding: 40px 20px;
+    border-right: 1px solid rgba(255, 215, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+}
+
+.sidebar h2 {
+    font-size: 1.5rem;
+    margin-bottom: 40px;
+    text-align: center;
+    letter-spacing: 1px;
+    color: #fff;
+}
+
+.sidebar h2 span {
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+.sidebar button {
+    width: 100%;
+    padding: 14px 20px;
+    margin-bottom: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    color: #bbb;
+    border-radius: 12px;
+    cursor: pointer;
+    text-align: left;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.sidebar button:hover {
+    background: rgba(255, 215, 0, 0.1);
+    color: #ffd700;
+    border-color: #ffd700;
+    transform: translateX(5px);
+}
+
+.btn-home {
+    margin-top: auto; /* ดันไปไว้ล่างสุด */
+    border-color: rgba(255, 0, 0, 0.2) !important;
+    color: #ff4d4d !important;
+}
+
+.btn-home:hover {
+    background: rgba(255, 77, 77, 0.1) !important;
+    color: #ff4d4d !important;
+    border-color: #ff4d4d !important;
+}
+
+/* --- Main Content --- */
+.main-content {
+    flex: 1;
+    padding: 50px;
+    overflow-y: auto;
+}
+
+.admin-section h3 {
+    font-size: 1.4rem;
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #fff;
+}
+
+/* --- Form & Input Style --- */
+.admin-section {
+    background: #1a1a1a;
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    max-width: 800px;
+    margin-bottom: 30px;
+}
+
+.input-group {
+    margin-bottom: 20px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #aaa;
+    font-size: 0.85rem;
+}
+
+input, textarea, select {
+    width: 100%;
+    padding: 14px 18px;
+    background: #252525;
+    border: 1px solid #333;
+    color: #fff;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    outline: none;
+    transition: all 0.3s;
+}
+
+input:focus, textarea:focus, select:focus {
+    border-color: #ffd700;
+    background: #2a2a2a;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.1);
+}
+
+textarea {
+    resize: vertical;
+    min-height: 120px;
+}
+
+/* --- Card Style (For Angpao/Orders) --- */
+.admin-card {
+    background: #222;
+    padding: 20px;
+    border-radius: 15px;
+    margin-bottom: 15px;
+    border-left: 4px solid #ffd700;
+    transition: 0.3s;
+}
+
+.admin-card:hover {
+    background: #282828;
+}
+
+.admin-card p {
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+}
+
+.admin-card b {
+    color: #ffd700;
+}
+
+/* --- Buttons --- */
+.btn-save {
+    background: linear-gradient(135deg, #ffd700 0%, #b8860b 100%);
+    color: #000;
+    font-weight: 600;
+    border: none;
+    padding: 16px;
+    width: 100%;
+    cursor: pointer;
+    border-radius: 12px;
+    margin-top: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: 0.3s;
+}
+
+.btn-save:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(255, 215, 0, 0.3);
+    filter: brightness(1.1);
+}
+
+.btn-approve {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.btn-approve:hover {
+    background: #218838;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #0f0f0f;
+}
+::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #ffd700;
+}

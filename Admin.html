@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel | RaizenSHOP</title>
+    <link rel="stylesheet" href="Admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Kanit:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="admin-container">
+        <div class="sidebar">
+            <h2>Raizen<span>ADMIN</span></h2>
+            <button onclick="showSection('reply-messages')">✉️ ตอบกลับลูกค้า</button>
+            <button onclick="showSection('add-product')">📦 เพิ่มสินค้าใหม่</button>
+            <button onclick="showSection('add-keys')">🔑 เติมสต็อกคีย์</button>
+            <button onclick="showSection('manage-products')">📋 จัดการ/ลบสินค้า</button>
+            <button onclick="window.location.href='/index.html'" class="btn-home" style="margin-top: 20px;">กลับไปหน้าร้าน</button>
+        </div>
+
+        <div class="main-content">
+            <section id="reply-messages" class="admin-section">
+                <h3>✉️ ข้อความติดต่อจากลูกค้า</h3>
+                <div id="messages-list"><p style="color: #888;">กำลังโหลดข้อมูล...</p></div>
+            </section>
+
+            <section id="add-product" class="admin-section" style="display:none;">
+                <h3>📦 เพิ่มสินค้าใหม่เข้าหน้าร้าน</h3>
+                <form id="productForm">
+                    <div class="input-group"><label>ชื่อสินค้า</label><input type="text" id="p_name" required></div>
+                    <div class="input-group"><label>ราคา (บาท)</label><input type="number" id="p_price" required></div>
+                    <div class="input-group"><label>ลิงก์รูปภาพสินค้า</label><input type="text" id="p_url"></div>
+                    <div class="input-group"><label>ลิงก์ดาวน์โหลดสินค้า</label><input type="text" id="p_download"></div>
+                    <button type="submit" class="btn-save">บันทึกสินค้าลงร้าน</button>
+                </form>
+            </section>
+
+            <section id="add-keys" class="admin-section" style="display:none;">
+                <h3>🔑 เติมสต็อกคีย์สินค้า</h3>
+                <form id="keyForm">
+                    <div class="input-group"><label>เลือกสินค้า</label><select id="k_product_id" required></select></div>
+                    <div class="input-group"><label>คีย์สินค้า</label><textarea id="k_list" rows="10" required></textarea></div>
+                    <button type="submit" class="btn-save" style="background: #28a745;">บันทึกคีย์เข้าสต็อก</button>
+                </form>
+            </section>
+
+            <section id="manage-products" class="admin-section" style="display:none;">
+                <h3>📋 จัดการและลบสินค้า</h3>
+                <div id="manage-list"><p style="color: #888;">กำลังโหลดข้อมูล...</p></div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const adminName = localStorage.getItem('loggedInUser');
+        const userRole = localStorage.getItem('userRole');
+
+        if (!adminName || userRole !== 'admin') {
+            alert('⚠️ เฉพาะแอดมินเท่านั้นที่เข้าหน้านี้ได้!');
+            window.location.href = '/index.html';
+        }
+
+        function showSection(id) {
+            document.querySelectorAll('.admin-section').forEach(s => s.style.display = 'none');
+            document.getElementById(id).style.display = 'block';
+            if(id === 'reply-messages') loadMessages();
+            if(id === 'add-keys') loadProductList(); 
+            if(id === 'manage-products') loadManageProducts();
+        }
+
+        // ข้อความติดต่อ
+        function loadMessages() {
+            fetch(`/api/admin/messages?admin_user=${adminName}`)
+                .then(res => res.json())
+                .then(data => {
+                    const list = document.getElementById('messages-list');
+                    if(data.length === 0) return list.innerHTML = '<p style="color: #666;">ไม่มีข้อความติดต่อจากลูกค้าครับ</p>';
+                    list.innerHTML = data.map(msg => `
+                        <div class="admin-card">
+                            <p><b>จากผู้ใช้:</b> ${msg.username}</p>
+                            <p><b>หัวข้อ:</b> ${msg.subject}</p>
+                            <p style="background: #111; padding: 10px; border-radius: 5px;">${msg.message}</p>
+                            ${msg.status === 'replied' 
+                                ? `<p style="color: #00ff00;">✅ คุณตอบกลับแล้ว: ${msg.admin_reply}</p>` 
+                                : `<div><textarea id="reply-${msg.id}" rows="2" style="width: 100%; padding: 10px; background: #222; color: white;"></textarea>
+                                   <button onclick="replyMessage(${msg.id})" style="background: #00c6ff; padding: 8px 15px; cursor: pointer;">ส่งตอบกลับ</button></div>`
+                            }
+                        </div>
+                    `).join('');
+                });
+        }
+
+        function replyMessage(msgId) {
+            const replyText = document.getElementById(`reply-${msgId}`).value;
+            if(!replyText) return;
+            fetch('/api/admin/reply-message', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ admin_user: adminName, message_id: msgId, reply_text: replyText })
+            }).then(() => loadMessages());
+        }
+
+        // จัดการสินค้า
+        function loadProductList() {
+            fetch(`/api/admin/products?admin_user=${adminName}`).then(res => res.json()).then(data => {
+                document.getElementById('k_product_id').innerHTML = '<option value="">-- เลือกสินค้า --</option>' + 
+                    data.map(p => `<option value="${p.id}">${p.name} (สต็อก: ${p.stock})</option>`).join('');
+            });
+        }
+
+        function loadManageProducts() {
+            fetch(`/api/admin/products?admin_user=${adminName}`).then(res => res.json()).then(data => {
+                const list = document.getElementById('manage-list');
+                if(data.length === 0) return list.innerHTML = '<p style="color: #666;">ไม่มีสินค้าในระบบ</p>';
+                list.innerHTML = data.map(p => `
+                    <div class="admin-card" style="display: flex; justify-content: space-between;">
+                        <div><h4>${p.name}</h4><p>สต็อก: ${p.stock}</p></div>
+                        <button onclick="deleteProduct(${p.id})" style="background: #dc3545; color: white; padding: 5px 15px;">🗑️ ลบ</button>
+                    </div>`).join('');
+            });
+        }
+
+        function deleteProduct(productId) {
+            if(!confirm('⚠️ ยืนยันการลบสินค้าและคีย์ทั้งหมดที่เกี่ยวข้อง?')) return;
+            fetch('/api/admin/delete-product', {
+                method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ admin_user: adminName, product_id: productId })
+            }).then(() => { loadManageProducts(); loadProductList(); });
+        }
+
+        document.getElementById('productForm').onsubmit = function(e) {
+            e.preventDefault();
+            fetch('/api/admin/add-product', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ admin_user: adminName, name: document.getElementById('p_name').value, price: document.getElementById('p_price').value, image_url: document.getElementById('p_url').value, download_url: document.getElementById('p_download').value })
+            }).then(() => { alert('เพิ่มสำเร็จ'); this.reset(); loadManageProducts(); });
+        };
+
+        document.getElementById('keyForm').onsubmit = function(e) {
+            e.preventDefault();
+            const keys = document.getElementById('k_list').value.split('\n').map(k => k.trim()).filter(k => k !== "");
+            fetch('/api/admin/add-keys', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ admin_user: adminName, product_id: document.getElementById('k_product_id').value, keys: keys })
+            }).then(() => { alert('เพิ่มคีย์สำเร็จ'); this.reset(); loadProductList(); });
+        };
+
+        loadMessages();
+    </script>
+</body>
+</html>

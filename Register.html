@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register | RaizenSHOP</title>
+    <link rel="stylesheet" href="Register.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="register-container">
+        <h2>Raizen<span>SHOP</span></h2>
+        <p>สร้างบัญชีใหม่เพื่อเริ่มช้อป</p>
+        
+        <form action="http://localhost:3000/register" method="POST">
+            <div class="input-group">
+                <label for="reg-username">Username</label>
+                <input type="text" id="reg-username" name="reg-username" placeholder="ตั้งชื่อผู้ใช้" required>
+            </div>
+            
+            <div class="input-group">
+                <label for="gmail">E-mail</label>
+                <input type="email" id="gmail" name="gmail" placeholder="example@mail.com" required>
+            </div>
+            
+            <div class="input-group">
+                <label for="reg-password">Password</label>
+                <input type="password" id="reg-password" name="reg-password" placeholder="••••••••" required>
+            </div>
+            
+            <button type="submit" class="btn-register">Register</button>
+            <button type="button" class="btn-login" onclick="window.location.href='/Login.html'">Back to Login</button>
+        </form>
+    </div>
+    </body>
+</html>
