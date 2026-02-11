@@ -95,11 +95,11 @@
                     <li>พิมพ์จำนวนเงินที่ต้องการโอน</li>
                     <li>สแกนจ่ายผ่านแอปธนาคาร หรือ TrueMoney Wallet</li>
                     <li>แนบรูปสลิปและกดยืนยัน</li>
-                    <li>ชื่อนาย.บุรพล จันทร์แจ้ง</li>
                 </ul>
             </div>
 
             <form action="/topup-slip" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="email" id="hidden-email">
                 <input type="hidden" name="username" class="username-field">
                 
                 <div class="input-group">
@@ -130,10 +130,16 @@
     </div>
 
     <script>
+        // ✨ แก้ไข Script: ดึงทั้ง Username และ Email มาใช้งาน
         const currentUser = localStorage.getItem('loggedInUser');
-        if (currentUser) {
+        const userEmail = localStorage.getItem('userEmail'); // ดึงอีเมลจาก LocalStorage
+
+        if (currentUser && userEmail) {
+            // ใส่ข้อมูลลงในฟอร์มที่ซ่อนไว้
             document.querySelector('.username-field').value = currentUser;
+            document.getElementById('hidden-email').value = userEmail;
         } else {
+            // ถ้าไม่มีข้อมูล ให้ไล่กลับไปล็อกอินใหม่
             alert('กรุณาล็อกอินก่อนใช้งานระบบเติมเงินครับ');
             window.location.href = '/Login.html';
         }
@@ -152,5 +158,4 @@
         }
     </script>
 </body>
-
 </html>
