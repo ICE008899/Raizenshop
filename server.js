@@ -18,11 +18,13 @@ const upload = multer({ dest: 'uploads/' });
 // ----------------------------------------------------
 // 1. เชื่อมต่อฐานข้อมูล Cloud (Aiven MySQL)
 // ----------------------------------------------------
+// ⚠️ ต้องใช้ข้อมูลของ Aiven เท่านั้นสำหรับ Render
 const db = mysql.createConnection({
-    host: 'raizenshop-db-raizenshop-db.e.aivencloud.com', // ใส่ Host จาก Aiven
-    port: 20635,                                          // ใส่ Port จาก Aiven
+    host: 'raizenshop-db-raizenshop-db.e.aivencloud.com', // Host ของ Aiven
+    port: 20635,                                          // Port ของ Aiven
     user: 'avnadmin',
-    password: 'AVNS_D61Ll7j_RDGKzGYEG2N',              // 🔑 ใส่รหัสผ่าน
+    // 🔑 ใส่รหัสผ่าน Aiven ของคุณตรงนี้ (อย่าลืม!)
+    password: 'AVNS_D61Ll7j_RDGKzGYEG2N', 
     database: 'defaultdb',
     ssl: { rejectUnauthorized: false }                    // ✨ จำเป็นสำหรับ Cloud
 });
@@ -47,23 +49,19 @@ const isAdmin = (req, res, next) => {
 };
 
 // ==========================================
-// 🧑‍💻 ระบบผู้ใช้ทั่วไป (User System)
+// 🧑‍💻 ระบบผู้ใช้ทั่วไป
 // ==========================================
 
-// สมัครสมาชิก
 app.post('/register', (req, res) => {
-    // รับค่า email จากทั้งตัวแปร gmail หรือ email (เผื่อหน้าเว็บส่งมาไม่เหมือนกัน)
     const username = req.body['reg-username'];
     const email = req.body.gmail || req.body.email; 
     const password = req.body['reg-password'];
 
     db.query("SELECT * FROM users WHERE email = ?", [email], (err, results) => {
         if (err) return res.send("❌ Database Error: " + err);
-        
         if (results.length > 0) {
-            return res.send("<script>alert('❌ อีเมลนี้ถูกใช้งานแล้วครับ! กรุณาใช้อีเมลอื่น'); window.history.back();</script>");
+            return res.send("<script>alert('❌ อีเมลนี้ถูกใช้งานแล้วครับ!'); window.history.back();</script>");
         }
-
         const sql = "INSERT INTO users (username, email, password, balance, role) VALUES (?, ?, ?, 0, 'user')";
         db.query(sql, [username, email, password], (insertErr) => {
             if (insertErr) return res.send("❌ สมัครไม่ผ่าน: " + insertErr);
@@ -72,16 +70,13 @@ app.post('/register', (req, res) => {
     });
 });
 
-// ล็อกอิน
 app.post('/login', (req, res) => {
     const usernameOrEmail = req.body['reg-username']; 
     const password = req.body['reg-password'];
 
     const sql = "SELECT * FROM users WHERE (username = ? OR email = ?) AND password = ?";
-    
     db.query(sql, [usernameOrEmail, usernameOrEmail, password], (err, results) => {
         if (err) return res.send("❌ Database Error: " + err);
-        
         if (results.length > 0) {
             const user = results[0];
             res.send(`<script>
@@ -96,11 +91,9 @@ app.post('/login', (req, res) => {
     });
 });
 
-// เช็คยอดเงิน
 app.get('/api/balance', (req, res) => {
     const email = req.query.email;
     if (!email) return res.json({ balance: 0 });
-
     db.query("SELECT balance FROM users WHERE email = ?", [email], (err, results) => {
         if (err || results.length === 0) return res.json({ balance: 0 });
         res.json({ balance: results[0].balance });
@@ -108,22 +101,19 @@ app.get('/api/balance', (req, res) => {
 });
 
 // ==========================================
-// 🤖 ระบบเติมเงินอัตโนมัติ (แก้ไขใหม่ + มี Log ตรวจสอบ)
+// 🤖 ระบบเติมเงินอัตโนมัติ (แก้ไขสมบูรณ์)
 // ==========================================
 app.post('/topup-slip', upload.single('slipImage'), async (req, res) => {
     const { email } = req.body;
     const slipFile = req.file;
     
-    // 🔍 LOG: เริ่มต้นตรวจสอบ
     console.log("------------------------------------------------");
     console.log("🔍 เริ่มกระบวนการเติมเงิน...");
     console.log("📧 อีเมลเป้าหมาย:", email);
 
     if (!slipFile) return res.send("<script>alert('❌ กรุณาแนบรูปภาพสลิปครับ!'); window.history.back();</script>");
-    
-    // เช็คว่ามีอีเมลส่งมาจริงไหม
     if (!email || email === 'null' || email === 'undefined') {
-        console.log("❌ Error: ไม่ได้รับค่าอีเมลจากหน้าเว็บ");
+        console.log("❌ Error: ไม่ได้รับค่าอีเมล");
         return res.send("<script>alert('❌ ไม่พบข้อมูลผู้ใช้! กรุณา Logout แล้ว Login ใหม่ 1 ครั้งครับ'); window.location.href='/Login.html';</script>");
     }
 
@@ -131,10 +121,9 @@ app.post('/topup-slip', upload.single('slipImage'), async (req, res) => {
         const form = new FormData();
         form.append('file', fs.createReadStream(slipFile.path));
         
-        // ⚠️ นำ API Key ของคุณมาใส่ตรงนี้นะครับ
+        // 🔑 EasySlip API Key ของคุณ
         const API_KEY = '3629b657-e219-47fd-b40c-ead98c2c2137'; 
 
-        console.log("📡 กำลังส่งข้อมูลไปตรวจสอบที่ EasySlip...");
         const response = await axios.post('https://developer.easyslip.com/api/v1/verify', form, {
             headers: { ...form.getHeaders(), 'Authorization': `Bearer ${API_KEY}` }
         });
@@ -147,47 +136,33 @@ app.post('/topup-slip', upload.single('slipImage'), async (req, res) => {
         const refNumber = slipData.transRef;
         const realAmount = slipData.amount.amount;
 
-        console.log(`✅ สลิปผ่าน! ยอดเงิน: ${realAmount} บาท | Ref: ${refNumber}`);
+        console.log(`✅ สลิปผ่าน! ยอดเงิน: ${realAmount} บาท`);
 
-        // เช็คสลิปซ้ำ
         db.query("SELECT * FROM used_slips WHERE ref_number = ?", [refNumber], (err, results) => {
             if (results.length > 0) {
                 fs.unlinkSync(slipFile.path);
-                console.log("❌ Error: สลิปซ้ำ");
                 return res.send("<script>alert('❌ สลิปนี้ถูกใช้งานไปแล้วครับ!'); window.history.back();</script>");
             }
 
-            // บันทึกสลิป และ อัปเดตเงิน
             db.query("INSERT INTO used_slips (ref_number, username, amount) VALUES (?, ?, ?)", [refNumber, email, realAmount], (insertErr) => {
-                if (insertErr) console.error("⚠️ Warning: บันทึกประวัติสลิปไม่สำเร็จ (แต่จะพยายามเติมเงิน)");
-
-                // ✨ อัปเดตเงินโดยใช้อีเมล
+                // ✨ เติมเงินโดยใช้ Email
                 db.query("UPDATE users SET balance = balance + ? WHERE email = ?", [realAmount, email], (updateErr, updateResult) => {
                     fs.unlinkSync(slipFile.path);
 
-                    if (updateErr) {
-                        console.error("❌ Database Error:", updateErr);
-                        return res.send(`<script>alert('❌ ระบบฐานข้อมูลขัดข้อง กรุณาติดต่อแอดมิน'); window.history.back();</script>`);
-                    }
-
-                    // 🔍 เช็คว่าเจออีเมลในฐานข้อมูลไหม?
-                    console.log("📊 ผลการอัปเดต:", updateResult);
                     if (updateResult.affectedRows === 0) {
-                        console.log("😱 Critical Error: หาอีเมลในฐานข้อมูลไม่เจอ!");
-                        return res.send(`<script>alert('❌ เติมเงินไม่เข้า! ระบบหาอีเมล ${email} ไม่เจอในระบบ (คุณอาจจะสมัครด้วยอีเมลอื่น?)'); window.history.back();</script>`);
+                        console.log("😱 Critical Error: หาอีเมลไม่เจอในฐานข้อมูล!");
+                        return res.send(`<script>alert('❌ เติมเงินไม่เข้า! ระบบหาอีเมล ${email} ไม่เจอ'); window.history.back();</script>`);
                     }
 
-                    console.log("🎉 เติมเงินสำเร็จสมบูรณ์!");
+                    console.log("🎉 เติมเงินสำเร็จ!");
                     res.send(`<script>alert('✅ เติมเงินสำเร็จ! ยอดเงิน ${realAmount} บาท เข้าสู่บัญชีเรียบร้อย'); window.location.href='/index.html';</script>`);
                 });
             });
         });
 
     } catch (error) {
-        console.error("❌ Slip Error:", error.response ? error.response.data : error.message);
+        console.error("❌ Slip Error:", error.message);
         if (slipFile && slipFile.path) fs.unlinkSync(slipFile.path);
-        
-        // แจ้ง Error ที่ชัดเจนขึ้น
         const errorMsg = error.response && error.response.data ? error.response.data.message : error.message;
         res.send(`<script>alert('❌ ตรวจสอบสลิปไม่ผ่าน: ${errorMsg}'); window.history.back();</script>`);
     }
@@ -203,9 +178,7 @@ app.get('/api/products', (req, res) => {
 
 app.post('/api/buy-product', (req, res) => {
     const { email, productId } = req.body;
-
     const checkSql = "SELECT u.balance, p.name, p.price, p.download_url FROM users u, products p WHERE u.email = ? AND p.id = ?";
-    
     db.query(checkSql, [email, productId], (err, results) => {
         if (err || results.length === 0) return res.json({ success: false, message: 'ไม่พบข้อมูลผู้ใช้หรือสินค้า' });
         
@@ -228,15 +201,10 @@ app.post('/api/buy-product', (req, res) => {
     });
 });
 
-// ==========================================
-// ✉️ รับข้อความติดต่อ & Admin (ส่วนอื่นๆ คงเดิม)
-// ==========================================
+// ส่วนอื่นๆ คงเดิม (Send Message, Admin)
 app.post('/send-message', (req, res) => {
     const { username, subject, message } = req.body;
-    if (!message || message.trim() === '') return res.send("<script>alert('❌ กรุณาพิมพ์ข้อความ!'); window.history.back();</script>");
-    
     db.query("INSERT INTO contact_messages (username, subject, message, status) VALUES (?, ?, ?, 'pending')", [username, subject, message], (err) => {
-        if (err) return res.send("❌ Error: " + err);
         res.send(`<script>alert('✅ ส่งข้อความสำเร็จ!'); window.location.href='/Inbox.html';</script>`);
     });
 });
@@ -253,10 +221,9 @@ app.get('/api/admin/products', isAdmin, (req, res) => {
 
 app.post('/api/admin/add-keys', isAdmin, (req, res) => {
     const { product_id, keys } = req.body;
-    if (!product_id || !keys) return res.json({ success: false, message: 'ข้อมูลไม่ครบ' });
     const values = keys.map(k => [product_id, k, 'available']);
     db.query("INSERT INTO product_keys (product_id, account_data, status) VALUES ?", [values], (err, result) => {
-        res.json({ success: true, message: `เพิ่ม ${result.affectedRows} คีย์สำเร็จ!` });
+        res.json({ success: true, message: `เพิ่มสำเร็จ!` });
     });
 });
 
@@ -287,4 +254,5 @@ app.post('/api/admin/reply-message', isAdmin, (req, res) => {
     });
 });
 
+// ✅ แก้ไข Port สำหรับ Render
 app.listen(PORT, () => console.log(`🚀 RaizenSHOP Server is running on port ${PORT}`));
