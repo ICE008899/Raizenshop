@@ -4,44 +4,220 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Order History | RaizenSHOP</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Kanit:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="History.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ✨ ดีไซน์ Dark Theme ให้เข้ากับร้าน */
+        body {
+            font-family: 'Poppins', 'Kanit', sans-serif;
+            background-color: #121212;
+            color: white;
+            margin: 0;
+            padding: 0;
+        }
+
+        .navbar {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 40px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo h2 { margin: 0; color: white; letter-spacing: 1px; }
+        .logo span { color: #ffd700; font-weight: bold; }
+
+        .history-container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .page-title {
+            text-align: center;
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+            color: #fff;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #aaa;
+            margin-bottom: 30px;
+            font-size: 0.9rem;
+        }
+
+        /* การ์ดรายการสินค้า */
+        .history-item {
+            background: #1e1e1e;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #333;
+            border-left: 5px solid #00c6ff; /* แถบสีฟ้าด้านซ้าย */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+        }
+        .history-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,198,255,0.1);
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+        .product-name { font-size: 1.2rem; font-weight: bold; color: #ffd700; }
+        .price { font-size: 1.1rem; color: #00ff00; font-weight: bold; }
+
+        /* กล่องแสดง Key */
+        .key-box {
+            background: #111;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .key-box label {
+            display: block;
+            color: #888;
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+        }
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+        }
+        .input-wrapper input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #00c6ff;
+            font-family: monospace;
+            font-size: 1rem;
+            outline: none;
+        }
+        .btn-copy {
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 5px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.8rem;
+        }
+        .btn-copy:hover {
+            background: #00c6ff;
+            color: black;
+            border-color: #00c6ff;
+        }
+
+        .btn-download {
+            display: block;
+            background: #222;
+            color: #ccc;
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            text-decoration: none;
+            border: 1px dashed #555;
+            transition: 0.2s;
+            margin-bottom: 10px;
+        }
+        .btn-download:hover {
+            border-color: #00ff00;
+            color: #00ff00;
+            background: #1a2a1a;
+        }
+
+        .date {
+            text-align: right;
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .btn-back {
+            display: block;
+            width: 100%;
+            max-width: 200px;
+            margin: 30px auto;
+            padding: 12px;
+            background: transparent;
+            border: 1px solid #00c6ff;
+            color: #00c6ff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: 0.3s;
+        }
+        .btn-back:hover {
+            background: #00c6ff;
+            color: black;
+        }
+    </style>
 </head>
 <body>
-    <div class="history-container">
+
+    <div class="navbar">
         <div class="logo"><h2>Raizen<span>SHOP</span></h2></div>
-        <p class="subtitle">ประวัติการสั่งซื้อสินค้าของคุณ</p>
+        <div style="color: #aaa; font-size: 0.9rem;">ประวัติการสั่งซื้อ</div>
+    </div>
+
+    <div class="history-container">
+        <h1 class="page-title">📦 รายการสินค้าของคุณ</h1>
+        <p class="subtitle">สินค้าทั้งหมดที่คุณเคยสั่งซื้อจะแสดงอยู่ที่นี่</p>
 
         <div id="history-list">
-            <p style="color: #aaa;">กำลังโหลดข้อมูล...</p>
+            <p style="text-align: center; color: #aaa; margin-top: 50px;">⏳ กำลังโหลดข้อมูล...</p>
         </div>
 
-        <button class="btn-back" onclick="window.location.href='/index.html'">กลับหน้าหลัก</button>
+        <button class="btn-back" onclick="window.location.href='/index.html'">⬅️ กลับหน้าหลัก</button>
     </div>
 
     <script>
-        const currentUser = localStorage.getItem('loggedInUser');
-        if (!currentUser) window.location.href = '/Login.html';
+        // ✨ ดึง Email จาก LocalStorage (สำคัญมาก! ต้องใช้ Email ในการค้นหา)
+        const userEmail = localStorage.getItem('userEmail');
+        
+        // ถ้าไม่มี Email ให้เด้งไปหน้า Login
+        if (!userEmail) {
+            alert('กรุณาล็อกอินก่อนเข้าดูประวัติการซื้อครับ');
+            window.location.href = '/Login.html';
+        }
 
-        // ดึงข้อมูลประวัติการซื้อ
-        fetch('/api/order-history?username=' + currentUser)
+        // ✨ เปลี่ยนจาก username เป็น email ในการ fetch
+        fetch('/api/order-history?email=' + userEmail)
             .then(res => res.json())
             .then(orders => {
                 const list = document.getElementById('history-list');
+                
                 if (orders.length === 0) {
-                    list.innerHTML = '<p style="color: #888; margin: 20px 0;">ยังไม่มีประวัติการซื้อสินค้า</p>';
+                    list.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: #666;">
+                            <p style="font-size: 3rem; margin-bottom: 10px;">📭</p>
+                            <p>คุณยังไม่มีประวัติการสั่งซื้อสินค้า</p>
+                            <a href="/index.html" style="color: #00c6ff; text-decoration: none;">ไปเลือกซื้อสินค้าเลย!</a>
+                        </div>
+                    `;
                     return;
                 }
 
+                // วนลูปสร้างรายการสินค้า
                 list.innerHTML = orders.map(order => `
                     <div class="history-item">
                         <div class="item-header">
                             <span class="product-name">${order.product_name}</span>
-                            <span class="price">${order.product_price} ฿</span>
+                            <span class="price">฿ ${parseFloat(order.product_price).toFixed(2)}</span>
                         </div>
                         
                         <div class="key-box">
-                            <label>รหัสสินค้า / คีย์:</label>
+                            <label>🔑 รหัสสินค้า / Key:</label>
                             <div class="input-wrapper">
                                 <input type="text" value="${order.product_key}" id="key-${order.id}" readonly>
                                 <button class="btn-copy" onclick="copyKey('key-${order.id}')">คัดลอก</button>
@@ -54,23 +230,42 @@
                             </a>
                         ` : ''}
 
-                        <div class="date">${new Date(order.purchase_date).toLocaleString('th-TH')}</div>
+                        <div class="date">📅 สั่งซื้อเมื่อ: ${new Date(order.purchase_date).toLocaleString('th-TH')}</div>
                     </div>
                 `).join('');
             })
             .catch(err => {
                 console.error(err);
-                document.getElementById('history-list').innerHTML = '<p style="color: red;">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>';
+                document.getElementById('history-list').innerHTML = '<p style="text-align: center; color: #ff4d4d; margin-top: 20px;">❌ เกิดข้อผิดพลาดในการโหลดข้อมูล</p>';
             });
 
-        // ✨ ฟังก์ชันก๊อปปี้คีย์
+        // ✨ ฟังก์ชันก๊อปปี้คีย์ (ปรับปรุงให้รองรับมือถือ)
         function copyKey(elementId) {
             const copyText = document.getElementById(elementId);
+            
+            // เลือกข้อความ
             copyText.select();
             copyText.setSelectionRange(0, 99999); // สำหรับมือถือ
-            navigator.clipboard.writeText(copyText.value);
-            
-            alert("คัดลอกรหัสสินค้าแล้ว: " + copyText.value);
+
+            // สั่งก๊อปปี้
+            try {
+                navigator.clipboard.writeText(copyText.value).then(() => {
+                    // เปลี่ยนปุ่มเป็นคำว่า "Copied!" ชั่วคราว
+                    const btn = document.querySelector(`button[onclick="copyKey('${elementId}')"]`);
+                    const originalText = btn.innerText;
+                    btn.innerText = "✅ คัดลอกแล้ว!";
+                    btn.style.background = "#00ff00";
+                    btn.style.color = "black";
+                    
+                    setTimeout(() => {
+                        btn.innerText = originalText;
+                        btn.style.background = "#333";
+                        btn.style.color = "white";
+                    }, 2000);
+                });
+            } catch (err) {
+                alert("คัดลอก: " + copyText.value);
+            }
         }
     </script>
 </body>
