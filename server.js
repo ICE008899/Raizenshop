@@ -275,7 +275,7 @@ app.post('/api/admin/reply-message', isAdmin, (req, res) => {
     });
 });
 // ==========================================
-// 🔐 API สำหรับเช็ค Key (ฉบับแก้บั๊กถาวร - บังคับผ่าน)
+// 🔐 API สำหรับเช็ค Key (ฉบับแก้บั๊ก Data too long)
 // ==========================================
 app.get('/api/auth', (req, res) => {
     res.set('Content-Type', 'text/plain');
@@ -288,18 +288,23 @@ app.get('/api/auth', (req, res) => {
         if (err) return res.send("DB_ERROR");
         if (results.length === 0) return res.send("INVALID_KEY");
 
-        const dbStatus = (results[0].status || '').trim(); 
+        const row = results[0];
+        const dbStatus = (row.status || '').trim(); 
 
-        // เช็คเงื่อนไขเบื้องต้น
-        if (dbStatus === 'sold' || dbStatus === 'available' || dbStatus === '' || dbStatus === hwid) {
+        // ✅ กรณีที่ 1: เครื่องเดิมล็อกอิน (HWID ตรงเป๊ะ) -> ให้ผ่านทันที
+        if (dbStatus === hwid) {
+            return res.send("SUCCESS");
+        }
+
+        // ✅ กรณีที่ 2: คีย์ใหม่ (sold / available) -> ทำการล็อกเครื่อง
+        if (dbStatus === 'sold' || dbStatus === 'available' || dbStatus === '') {
             
-            // ✅ บรรทัดมหาเทพ: ส่ง SUCCESS ทันทีที่เจอคีย์! 
-            // ไม่ต้องรอ UPDATE ฐานข้อมูลเสร็จ เพื่อตัดปัญหา UPDATE_FAILED
+            // ส่ง SUCCESS ทันทีเพื่อความลื่นไหลของลูกค้า
             res.send("SUCCESS");
 
-            // 🔒 พยายามอัปเดตและบันทึก Log อยู่เบื้องหลัง (ถ้าพลาดจะไม่เด้ง Error ใส่หน้าลูกค้า)
+            // ล็อก HWID และบันทึก Log อยู่เบื้องหลัง
             db.query("UPDATE product_keys SET status = ? WHERE account_data = ?", [hwid, key], (uErr) => {
-                if (uErr) console.error("⚠️ Background Update Error:", uErr.message);
+                if (uErr) console.error("❌ SQL Error (Check column length):", uErr.message);
                 
                 const pcName = hwid.split('-')[1] || 'Unknown';
                 const logSql = "INSERT INTO hwid_logs (license_key, hwid, computer_name) VALUES (?, ?, ?)";
@@ -307,7 +312,9 @@ app.get('/api/auth', (req, res) => {
                     if (logErr) console.error("⚠️ Background Log Error:", logErr.message);
                 });
             });
-        } else {
+        } 
+        // ❌ กรณีที่ 3: คีย์ถูกล็อกด้วย HWID อื่นไปแล้ว
+        else {
             return res.send("HWID_MISMATCH");
         }
     });
@@ -315,6 +322,7 @@ app.get('/api/auth', (req, res) => {
 // ✅ รัน Server (รองรับ Render Port)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 RaizenSHOP Server is running on port ${PORT}`));
+
 
 
 
