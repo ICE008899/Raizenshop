@@ -275,42 +275,57 @@ app.post('/api/admin/reply-message', isAdmin, (req, res) => {
     });
 });
 // ==========================================
-// 🔐 API สำหรับเช็ค Key และ ล็อก HWID ทันที
+// 🔐 API สำหรับเช็ค Key และ ล็อก HWID ทันที (Final Version)
 // ==========================================
 app.get('/api/auth', (req, res) => {
+    // 1. ตั้งค่า Header เป็น Text เสมอ เพื่อให้ Batch อ่านง่าย
     res.set('Content-Type', 'text/plain');
 
-    const key = req.query.key ? req.query.key.trim() : '';
-    const hwid = req.query.hwid ? req.query.hwid.trim() : '';
+    const key = (req.query.key || '').trim();
+    const hwid = (req.query.hwid || '').trim();
+
+    // Log ตรวจสอบการพยายามเข้าใช้งาน
+    console.log(`[AUTH CHECK] Key: ${key} | HWID: ${hwid}`);
 
     if (!key || !hwid) return res.send("EMPTY_INPUT");
 
+    // 2. ตรวจสอบคีย์ใน Database
     db.query("SELECT * FROM product_keys WHERE account_data = ? LIMIT 1", [key], (err, results) => {
-        if (err) return res.send("DB_ERROR");
+        if (err) {
+            console.error("[DB ERROR]", err);
+            return res.send("DB_ERROR");
+        }
+        
         if (results.length === 0) return res.send("INVALID_KEY");
 
-        const dbStatus = results[0].status ? results[0].status.trim() : ''; 
+        const row = results[0];
+        const dbStatus = (row.status || '').trim(); 
 
-        // ✅ ตรวจสอบเงื่อนไขการเข้าใช้งาน
+        // 3. ✅ ตรวจสอบเงื่อนไขการผ่าน: sold (เพิ่งซื้อ), available (ว่าง), หรือ HWID ตรงเดิม
         if (dbStatus === 'sold' || dbStatus === 'available' || dbStatus === '' || dbStatus === hwid) {
             
-            // 🔒 สั่งล็อกคีย์นี้เข้ากับ HWID ปัจจุบันทันที
+            // 🔒 สั่งล็อกคีย์นี้เข้ากับ HWID ปัจจุบันทันที (ผูกมัดถาวร)
             db.query("UPDATE product_keys SET status = ? WHERE account_data = ?", [hwid, key], (uErr) => {
-                if (uErr) return res.send("UPDATE_FAILED");
+                if (uErr) {
+                    console.error("[UPDATE ERROR]", uErr);
+                    return res.send("UPDATE_FAILED");
+                }
 
-                // ส่ง SUCCESS เพื่อให้ลูกค้าเข้าหน้าเมนูได้เลย
+                // 🎯 ส่ง SUCCESS ให้โปรแกรมลูกค้าทำงานต่อได้ทันที
                 res.send("SUCCESS");
 
-                // 📝 บันทึกประวัติลง Log (Background Task)
-                const pcName = hwid.split('-')[1] || 'Unknown';
+                // 📝 บันทึกประวัติลง Log (Background Task) แยกเป็นสัดส่วน
+                const parts = hwid.split('-');
+                const pcName = parts.length > 1 ? parts[1] : 'Unknown';
+                
                 db.query("INSERT INTO hwid_logs (license_key, hwid, computer_name) VALUES (?, ?, ?)", 
                 [key, hwid, pcName], (logErr) => {
-                    if (logErr) console.error("⚠️ Log Insert Error:", logErr.message);
+                    if (logErr) console.error("⚠️ Log Insert Error (Ignored):", logErr.message);
                 });
             });
         } else {
-            // ⛔ กรณีคีย์เคยถูกเครื่องอื่นล็อกไปแล้ว
-            console.log(`⛔ [SECURITY] Key: ${key} mismatch! Current HWID: ${hwid}`);
+            // ⛔ กรณีคีย์ถูกผูกกับเครื่องอื่นไปแล้ว (Hardware Lock ทำงาน)
+            console.log(`⛔ [SECURITY ALERT] Key: ${key} attempted mismatch! Current: ${hwid} vs DB: ${dbStatus}`);
             return res.send("HWID_MISMATCH");
         }
     });
@@ -318,6 +333,7 @@ app.get('/api/auth', (req, res) => {
 // ✅ รัน Server (รองรับ Render Port)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 RaizenSHOP Server is running on port ${PORT}`));
+
 
 
 
