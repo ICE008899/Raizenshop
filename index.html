@@ -6,6 +6,7 @@
     <title>Raizenshop | หน้าหลัก</title>
     <link rel="stylesheet" href="index.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
     <nav class="navbar">
@@ -37,37 +38,30 @@
     </div>
 
     <script>
-        // ✨ ดึงข้อมูล User และ Email จาก LocalStorage
         const currentUser = localStorage.getItem('loggedInUser');
-        const userEmail = localStorage.getItem('userEmail'); // ดึง Email มาใช้
+        const userEmail = localStorage.getItem('userEmail');
         const userRole = localStorage.getItem('userRole');
 
-        // ตรวจสอบว่ามี Email ไหม (ถ้าไม่มี แสดงว่า Login ด้วยระบบเก่า ให้ Logout ก่อน)
         if (currentUser && userEmail) {
-            
-            // ✨ 1. เช็คยอดเงินโดยใช้ Email
+            // เช็คยอดเงิน
             fetch(`/api/balance?email=${userEmail}`)
                 .then(response => response.json())
                 .then(data => {
-                    // แสดงยอดเงินแบบมีลูกน้ำและทศนิยม 2 ตำแหน่ง
                     document.getElementById('user-balance').innerText = '💰 ยอดเงิน: ' + parseFloat(data.balance).toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ฿';
                 })
-                .catch(error => console.error('เกิดข้อผิดพลาดในการดึงยอดเงิน:', error));
+                .catch(error => console.error('Error:', error));
 
             if (userRole === 'admin') {
                 document.getElementById('admin-btn').style.display = 'inline-block';
             }
             
-            // เรียกใช้งานฟังก์ชันโหลดสินค้าจากฐานข้อมูล
             loadProducts();
 
         } else {
-            // ถ้าข้อมูลไม่ครบ ให้ไปหน้า Login ใหม่
             alert('กรุณาล็อกอินใหม่เพื่ออัปเดตข้อมูลบัญชีครับ');
             window.location.href = '/Login.html';
         }
 
-        // ฟังก์ชันโหลดสินค้าทั้งหมดมาแสดงผล
         function loadProducts() {
             fetch('/api/products') 
                 .then(res => res.json())
@@ -78,7 +72,6 @@
                         return;
                     }
 
-                    // สร้างการ์ดสินค้าตามข้อมูลที่มีในฐานข้อมูล
                     display.innerHTML = data.map(product => `
                         <div class="card">
                             <div class="card-image-wrapper">
@@ -91,7 +84,8 @@
                                     คงเหลือ: ${product.stock} ชิ้น
                                 </p>
                                 <div class="card-actions">
-                                    <button class="btn-detail">รายละเอียด</button>
+                                    <button class="btn-detail" onclick="showDetails('${product.name}', '${product.price}', \`${product.description || 'ไม่มีรายละเอียดเพิ่มเติม'}\`)">รายละเอียด</button>
+                                    
                                     <button class="btn-buy" 
                                             ${product.stock > 0 ? `onclick="buyProduct(${product.id})"` : 'disabled style="background: #444; opacity: 0.6;"'}>
                                             ${product.stock > 0 ? 'ซื้อเลย' : 'สินค้าหมด'}
@@ -107,17 +101,36 @@
                 });
         }
 
-        // ✨ ฟังก์ชันซื้อสินค้า (แก้ให้ใช้ Email ตัดเงิน)
+        // ✨ ฟังก์ชันใหม่: แสดงรายละเอียดสินค้า (Pop-up)
+        function showDetails(name, price, description) {
+            Swal.fire({
+                title: `<span style="color: #ffd700">${name}</span>`, // ชื่อสินค้าสีทอง
+                html: `
+                    <div style="text-align: left; color: #e0e0e0;">
+                        <p style="font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px;">
+                           ราคา: <span style="color: #00ff00;">${parseFloat(price).toFixed(2)} ฿</span>
+                        </p>
+                        <div style="background: #252525; padding: 15px; border-radius: 8px; border: 1px solid #333;">
+                            <p style="white-space: pre-wrap; line-height: 1.6; margin: 0; font-size: 0.95rem;">${description}</p>
+                        </div>
+                    </div>
+                `,
+                background: '#121212', // พื้นหลัง Pop-up สีดำ
+                confirmButtonText: 'ปิดหน้าต่าง',
+                confirmButtonColor: '#00c6ff',
+                width: '600px'
+            });
+        }
+
         function buyProduct(productId) {
-            if (!userEmail) return; // ถ้าไม่มี Email ไม่ให้ซื้อ
+            if (!userEmail) return;
 
             if (confirm('ยืนยันการซื้อสินค้าชิ้นนี้ใช่หรือไม่?')) {
-                // เปลี่ยนการส่งข้อมูลเป็น JSON เพื่อความทันสมัยและรองรับภาษาไทยได้ดีกว่า
                 fetch('/api/buy-product', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        email: userEmail, // ส่ง Email ไปแทน Username
+                        email: userEmail,
                         productId: productId 
                     })
                 })
@@ -137,7 +150,7 @@
         function logout() {
             if(confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
                 localStorage.removeItem('loggedInUser');
-                localStorage.removeItem('userEmail'); // ลบ Email ออกด้วย
+                localStorage.removeItem('userEmail');
                 localStorage.removeItem('userRole');
                 window.location.href = '/Login.html';
             }
