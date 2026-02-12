@@ -18,15 +18,14 @@ const upload = multer({ dest: 'uploads/' });
 // ----------------------------------------------------
 // 1. เชื่อมต่อฐานข้อมูล Cloud (Aiven MySQL)
 // ----------------------------------------------------
-// ⚠️ ต้องใช้ข้อมูลของ Aiven เท่านั้นสำหรับ Render
 const db = mysql.createConnection({
-    host: 'raizenshop-db-raizenshop-db.e.aivencloud.com', // Host ของ Aiven
-    port: 20635,                                          // Port ของ Aiven
+    host: 'raizenshop-db-raizenshop-db.e.aivencloud.com',
+    port: 20635,
     user: 'avnadmin',
-    // 🔑 ใส่รหัสผ่าน Aiven ของคุณตรงนี้ (อย่าลืม!)
+    // ⚠️ อย่าลืมใส่รหัสผ่าน Aiven ของคุณที่นี่
     password: 'AVNS_D61Ll7j_RDGKzGYEG2N', 
     database: 'defaultdb',
-    ssl: { rejectUnauthorized: false }                    // ✨ จำเป็นสำหรับ Cloud
+    ssl: { rejectUnauthorized: false }
 });
 
 db.connect((err) => {
@@ -49,9 +48,10 @@ const isAdmin = (req, res, next) => {
 };
 
 // ==========================================
-// 🧑‍💻 ระบบผู้ใช้ทั่วไป
+// 🧑‍💻 ระบบผู้ใช้ทั่วไป (สมัคร/ล็อกอิน/เช็คยอด)
 // ==========================================
 
+// สมัครสมาชิก
 app.post('/register', (req, res) => {
     const username = req.body['reg-username'];
     const email = req.body.gmail || req.body.email; 
@@ -70,6 +70,7 @@ app.post('/register', (req, res) => {
     });
 });
 
+// ล็อกอิน
 app.post('/login', (req, res) => {
     const usernameOrEmail = req.body['reg-username']; 
     const password = req.body['reg-password'];
@@ -91,6 +92,7 @@ app.post('/login', (req, res) => {
     });
 });
 
+// เช็คยอดเงิน
 app.get('/api/balance', (req, res) => {
     const email = req.query.email;
     if (!email) return res.json({ balance: 0 });
@@ -100,8 +102,20 @@ app.get('/api/balance', (req, res) => {
     });
 });
 
+// 📜 ดึงประวัติการซื้อ (สำหรับ History.html)
+app.get('/api/order-history', (req, res) => {
+    const email = req.query.email;
+    db.query("SELECT * FROM order_history WHERE username = ? ORDER BY purchase_date DESC", [email], (err, results) => {
+        if (err) {
+            console.error("History Error:", err);
+            return res.json([]);
+        }
+        res.json(results || []);
+    });
+});
+
 // ==========================================
-// 🤖 ระบบเติมเงินอัตโนมัติ (แก้ไขสมบูรณ์)
+// 🤖 ระบบเติมเงินอัตโนมัติ (EasySlip)
 // ==========================================
 app.post('/topup-slip', upload.single('slipImage'), async (req, res) => {
     const { email } = req.body;
@@ -121,7 +135,7 @@ app.post('/topup-slip', upload.single('slipImage'), async (req, res) => {
         const form = new FormData();
         form.append('file', fs.createReadStream(slipFile.path));
         
-        // 🔑 EasySlip API Key ของคุณ
+        // 🔑 EasySlip API Key
         const API_KEY = '3629b657-e219-47fd-b40c-ead98c2c2137'; 
 
         const response = await axios.post('https://developer.easyslip.com/api/v1/verify', form, {
@@ -145,7 +159,6 @@ app.post('/topup-slip', upload.single('slipImage'), async (req, res) => {
             }
 
             db.query("INSERT INTO used_slips (ref_number, username, amount) VALUES (?, ?, ?)", [refNumber, email, realAmount], (insertErr) => {
-                // ✨ เติมเงินโดยใช้ Email
                 db.query("UPDATE users SET balance = balance + ? WHERE email = ?", [realAmount, email], (updateErr, updateResult) => {
                     fs.unlinkSync(slipFile.path);
 
@@ -172,12 +185,15 @@ app.post('/topup-slip', upload.single('slipImage'), async (req, res) => {
 // 🛒 ระบบซื้อสินค้า
 // ==========================================
 app.get('/api/products', (req, res) => {
+    // ดึงสินค้าพร้อมเช็คสต็อก
     const sql = "SELECT p.*, (SELECT COUNT(*) FROM product_keys pk WHERE pk.product_id = p.id AND pk.status = 'available') as stock FROM products p";
     db.query(sql, (err, results) => res.json(results || []));
 });
 
 app.post('/api/buy-product', (req, res) => {
     const { email, productId } = req.body;
+    
+    // เช็คเงินและข้อมูลสินค้า
     const checkSql = "SELECT u.balance, p.name, p.price, p.download_url FROM users u, products p WHERE u.email = ? AND p.id = ?";
     db.query(checkSql, [email, productId], (err, results) => {
         if (err || results.length === 0) return res.json({ success: false, message: 'ไม่พบข้อมูลผู้ใช้หรือสินค้า' });
@@ -185,11 +201,13 @@ app.post('/api/buy-product', (req, res) => {
         const { balance, price, name, download_url } = results[0];
         if (balance < price) return res.json({ success: false, message: 'ยอดเงินของคุณไม่พอ' });
 
+        // หาคีย์ว่าง 1 อัน
         db.query("SELECT id, account_data FROM product_keys WHERE product_id = ? AND status = 'available' LIMIT 1", [productId], (err, keyResults) => {
             if (err || keyResults.length === 0) return res.json({ success: false, message: 'สินค้าหมดชั่วคราว' });
             
             const { id: keyId, account_data: keyData } = keyResults[0];
 
+            // ตัดเงิน -> เปลี่ยนสถานะคีย์ -> บันทึกประวัติ
             db.query("UPDATE users SET balance = balance - ? WHERE email = ?", [price, email], () => {
                 db.query("UPDATE product_keys SET status = 'sold' WHERE id = ?", [keyId], () => {
                     db.query("INSERT INTO order_history (username, product_name, product_price, product_key, download_url) VALUES (?, ?, ?, ?, ?)", [email, name, price, keyData, download_url], () => {
@@ -201,7 +219,9 @@ app.post('/api/buy-product', (req, res) => {
     });
 });
 
-// ส่วนอื่นๆ คงเดิม (Send Message, Admin)
+// ==========================================
+// ✉️ ระบบข้อความ & Admin
+// ==========================================
 app.post('/send-message', (req, res) => {
     const { username, subject, message } = req.body;
     db.query("INSERT INTO contact_messages (username, subject, message, status) VALUES (?, ?, ?, 'pending')", [username, subject, message], (err) => {
@@ -214,6 +234,7 @@ app.get('/api/user/messages', (req, res) => {
     db.query("SELECT * FROM contact_messages WHERE username = ? ORDER BY sent_at DESC", [username], (err, results) => res.json(results || []));
 });
 
+// --- Admin Endpoints ---
 app.get('/api/admin/products', isAdmin, (req, res) => {
     const sql = "SELECT id, name, (SELECT COUNT(*) FROM product_keys WHERE product_id = products.id AND status = 'available') as stock FROM products";
     db.query(sql, (err, results) => res.json(results || []));
@@ -254,7 +275,6 @@ app.post('/api/admin/reply-message', isAdmin, (req, res) => {
     });
 });
 
-// ✅ แก้ไข Port สำหรับ Render
+// ✅ รัน Server (รองรับ Render Port)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 RaizenSHOP Server is running on port ${PORT}`));
-
