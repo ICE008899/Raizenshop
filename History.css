@@ -3,29 +3,32 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Poppins', sans-serif;
+    font-family: 'Poppins', 'Kanit', sans-serif; /* เพิ่ม Kanit ให้รองรับภาษาไทยสวยๆ */
 }
 
 body {
     background: radial-gradient(circle at center, #232323 0%, #000000 100%);
     min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    display: flex; /* จัดให้อยู่ตรงกลางจอเสมอ */
+    justify-content: center; 
+    align-items: center; 
     color: white;
     padding: 20px;
 }
 
+/* กล่องหลักของหน้าประวัติ */
 .history-container {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(15px);
+    background: rgba(255, 255, 255, 0.03); /* พื้นหลังโปร่งใสเล็กน้อย */
+    backdrop-filter: blur(15px); /* เอฟเฟกต์เบลอ */
     padding: 40px;
     border-radius: 24px;
-    border: 1px solid rgba(255, 215, 0, 0.3);
+    border: 1px solid rgba(255, 215, 0, 0.3); /* ขอบสีทองจางๆ */
     box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 215, 0, 0.1);
     width: 100%;
-    max-width: 500px;
+    max-width: 600px; /* ขยายความกว้างให้พอดี */
     text-align: center;
+    position: relative;
+    overflow: hidden;
 }
 
 .logo h2 {
@@ -49,11 +52,12 @@ body {
 /* ตกแต่งรายการแต่ละ Order */
 #history-list {
     margin-bottom: 25px;
-    max-height: 400px;
+    max-height: 500px; /* เพิ่มความสูงให้เห็นรายการเยอะขึ้น */
     overflow-y: auto;
     padding-right: 10px;
 }
 
+/* Scrollbar สวยๆ */
 #history-list::-webkit-scrollbar { width: 5px; }
 #history-list::-webkit-scrollbar-thumb { background: rgba(255, 215, 0, 0.3); border-radius: 10px; }
 
@@ -65,11 +69,13 @@ body {
     margin-bottom: 15px;
     text-align: left;
     transition: 0.3s;
+    position: relative;
 }
 
 .history-item:hover {
     border-color: #ffd700;
-    transform: scale(1.02);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
 }
 
 .item-header {
@@ -77,6 +83,8 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 15px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 10px;
 }
 
 .product-name {
@@ -86,15 +94,23 @@ body {
 }
 
 .price {
-    background: rgba(255, 215, 0, 0.15);
-    color: #ffd700;
+    background: rgba(0, 255, 136, 0.1); /* สีเขียวจางๆ */
+    color: #00ff88;
     padding: 4px 10px;
     border-radius: 8px;
     font-size: 0.85rem;
     font-weight: 600;
+    border: 1px solid rgba(0, 255, 136, 0.3);
 }
 
-/* ✨ ส่วนของ Key Box และปุ่มคัดลอก */
+/* ✨ ส่วนของ Key Box */
+.key-box {
+    background: rgba(0,0,0,0.3);
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
 .key-box label {
     display: block;
     font-size: 0.75rem;
@@ -105,37 +121,37 @@ body {
 .input-wrapper {
     display: flex;
     gap: 10px;
-    margin-top: 5px;
+    align-items: center;
 }
 
 .input-wrapper input {
     flex: 1;
-    background: rgba(0, 0, 0, 0.5);
-    color: #00ff88;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 10px;
-    border-radius: 10px;
+    background: transparent;
+    color: #00c6ff; /* สีฟ้า */
+    border: none;
     font-family: 'Courier New', Courier, monospace;
-    font-size: 0.9rem;
+    font-size: 1rem;
+    font-weight: bold;
     outline: none;
-    text-align: center;
+    text-align: left;
+    letter-spacing: 1px;
 }
 
 .btn-copy {
-    background: #ffd700;
-    color: black;
-    border: none;
-    padding: 0 15px;
-    border-radius: 10px;
-    font-weight: 600;
+    background: #333;
+    color: white;
+    border: 1px solid #555;
+    padding: 5px 12px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 0.8rem;
     transition: 0.3s;
 }
 
 .btn-copy:hover {
-    background: #ffffff;
-    transform: translateY(-2px);
+    background: #ffd700;
+    color: black;
+    border-color: #ffd700;
 }
 
 /* 📥 ปุ่มดาวน์โหลดสีฟ้าพรีเมียม */
@@ -160,10 +176,11 @@ body {
 }
 
 .date {
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     color: #666;
     margin-top: 10px;
     text-align: right;
+    font-style: italic;
 }
 
 /* ปุ่มกดกลับหน้าหลัก */
@@ -178,9 +195,11 @@ body {
     font-size: 1rem;
     cursor: pointer;
     transition: 0.3s;
+    margin-top: 10px;
 }
 
 .btn-back:hover {
     background: rgba(255, 215, 0, 0.1);
     border-color: #ffd700;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
 }
