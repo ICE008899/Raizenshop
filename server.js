@@ -275,7 +275,7 @@ app.post('/api/admin/reply-message', isAdmin, (req, res) => {
     });
 });
 // ==========================================
-// 🔐 API สำหรับเช็ค Key และ ล็อก HWID ทันที
+// 🔐 API สำหรับเช็ค Key และ ล็อก HWID (ฉบับแก้บั๊กถาวร)
 // ==========================================
 app.get('/api/auth', (req, res) => {
     res.set('Content-Type', 'text/plain');
@@ -291,26 +291,26 @@ app.get('/api/auth', (req, res) => {
 
         const dbStatus = (results[0].status || '').trim(); 
 
-        // ✅ เช็คเงื่อนไข sold หรือ เครื่องเดิม
+        // เช็คเงื่อนไข sold หรือ เครื่องเดิม
         if (dbStatus === 'sold' || dbStatus === 'available' || dbStatus === '' || dbStatus === hwid) {
             
-            // 🔒 1. อัปเดตตารางหลักเพื่อล็อกเครื่อง
+            // 🔒 1. อัปเดตตารางหลักเพื่อล็อกเครื่อง (อันนี้สำคัญที่สุด)
             db.query("UPDATE product_keys SET status = ? WHERE account_data = ?", [hwid, key], (uErr) => {
                 if (uErr) {
-                    console.error("Update Error:", uErr);
+                    console.error("Update product_keys Error:", uErr);
                     return res.send("UPDATE_FAILED");
                 }
 
-                // ✅ 2. ตอบ SUCCESS ทันที (เพื่อให้โปรแกรม Batch เข้าหน้าเมนูได้เลย)
+                // ✅ 2. ตอบ SUCCESS ทันที! (ลูกค้าจะเข้าโปรแกรมได้เลย ไม่ติดขัด)
                 res.send("SUCCESS");
 
-                // 📝 3. บันทึกลง hwid_logs (Background Task) 
-                // ระบุชื่อคอลัมน์ให้ตรงตามภาพ image_f0629d.png เป๊ะๆ
+                // 📝 3. พยายามบันทึกลง hwid_logs (ถ้าพลาดจะไม่ส่งผลต่อลูกค้า)
                 const pcName = hwid.split('-')[1] || 'Unknown';
+                // ตรวจสอบชื่อคอลัมน์ให้ตรงกับ HeidiSQL ของคุณ: license_key, hwid, computer_name
                 const logSql = "INSERT INTO hwid_logs (license_key, hwid, computer_name) VALUES (?, ?, ?)";
                 
                 db.query(logSql, [key, hwid, pcName], (logErr) => {
-                    if (logErr) console.error("⚠️ Log Insert Error (Ignored):", logErr.message);
+                    if (logErr) console.error("⚠️ Background Log Error (Ignored):", logErr.message);
                 });
             });
         } else {
@@ -321,6 +321,7 @@ app.get('/api/auth', (req, res) => {
 // ✅ รัน Server (รองรับ Render Port)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 RaizenSHOP Server is running on port ${PORT}`));
+
 
 
 
