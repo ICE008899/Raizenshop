@@ -275,65 +275,42 @@ app.post('/api/admin/reply-message', isAdmin, (req, res) => {
     });
 });
 // ==========================================
-// 🔐 API สำหรับเช็ค Key (ฉบับแก้บั๊ก UPDATE_FAILED สมบูรณ์)
+// 🔐 API สำหรับเช็ค Key และ ล็อก HWID ทันที
 // ==========================================
 app.get('/api/auth', (req, res) => {
-    // 1. ตั้งค่า Header เป็น Text เสมอ
     res.set('Content-Type', 'text/plain');
 
     const key = req.query.key ? req.query.key.trim() : '';
     const hwid = req.query.hwid ? req.query.hwid.trim() : '';
 
-    console.log(`[AUTH CHECK] Key: ${key} | HWID: ${hwid}`);
-
     if (!key || !hwid) return res.send("EMPTY_INPUT");
 
-    // 2. ตรวจสอบคีย์ใน Database
     db.query("SELECT * FROM product_keys WHERE account_data = ? LIMIT 1", [key], (err, results) => {
-        if (err) {
-            console.error("[DB ERROR]", err);
-            return res.send("DB_ERROR");
-        }
+        if (err) return res.send("DB_ERROR");
+        if (results.length === 0) return res.send("INVALID_KEY");
 
-        if (results.length === 0) {
-            console.log(`❌ [AUTH FAIL] Key not found: ${key}`);
-            return res.send("INVALID_KEY");
-        }
+        const dbStatus = results[0].status ? results[0].status.trim() : ''; 
 
-        const row = results[0];
-        const dbStatus = row.status ? row.status.trim() : ''; 
-
-        // 3. เงื่อนไข: รองรับทั้ง sold, available, ค่าว่าง หรือ HWID ตรงกัน
+        // ✅ ตรวจสอบเงื่อนไขการเข้าใช้งาน
         if (dbStatus === 'sold' || dbStatus === 'available' || dbStatus === '' || dbStatus === hwid) {
             
-            // อัปเดตสถานะในตารางหลัก (product_keys)
-            db.query("UPDATE product_keys SET status = ? WHERE account_data = ?", [hwid, key], (updateErr) => {
-                if (updateErr) {
-                    console.error("[UPDATE ERROR]", updateErr);
-                    return res.send("UPDATE_FAILED");
-                }
+            // 🔒 สั่งล็อกคีย์นี้เข้ากับ HWID ปัจจุบันทันที
+            db.query("UPDATE product_keys SET status = ? WHERE account_data = ?", [hwid, key], (uErr) => {
+                if (uErr) return res.send("UPDATE_FAILED");
 
-                // ✅ ตอบ SUCCESS ทันทีเพื่อให้โปรแกรมลูกค้าทำงานต่อได้ (เข้าหน้าเมนู)
+                // ส่ง SUCCESS เพื่อให้ลูกค้าเข้าหน้าเมนูได้เลย
                 res.send("SUCCESS");
 
-                // 📝 บันทึกประวัติลงตาราง hwid_logs แบบระบุชื่อคอลัมน์ (เพื่อป้องกันปัญหาชื่อไม่ตรง)
-                const parts = hwid.split('-');
-                const pcName = parts.length > 1 ? parts[1] : 'Unknown';
-                
-                const logSql = "INSERT INTO hwid_logs (license_key, hwid, computer_name) VALUES (?, ?, ?)";
-                db.query(logSql, [key, hwid, pcName], (logErr) => {
-                    if (logErr) {
-                        // ถ้าบันทึก Log ไม่เข้า ให้ขึ้นเตือนใน Console แต่ไม่ต้องส่ง Error กลับไปหาลูกค้า
-                        console.error("⚠️ Log Insert Error (Ignored):", logErr.message);
-                    } else {
-                        console.log(`✅ [LOG SUCCESS] Recorded for: ${hwid}`);
-                    }
+                // 📝 บันทึกประวัติลง Log (Background Task)
+                const pcName = hwid.split('-')[1] || 'Unknown';
+                db.query("INSERT INTO hwid_logs (license_key, hwid, computer_name) VALUES (?, ?, ?)", 
+                [key, hwid, pcName], (logErr) => {
+                    if (logErr) console.error("⚠️ Log Insert Error:", logErr.message);
                 });
             });
-        } 
-        // กรณีคีย์ถูกผูกกับเครื่องอื่นไปแล้ว
-        else {
-            console.log(`⛔ [AUTH DENIED] HWID Mismatch!`);
+        } else {
+            // ⛔ กรณีคีย์เคยถูกเครื่องอื่นล็อกไปแล้ว
+            console.log(`⛔ [SECURITY] Key: ${key} mismatch! Current HWID: ${hwid}`);
             return res.send("HWID_MISMATCH");
         }
     });
@@ -341,6 +318,7 @@ app.get('/api/auth', (req, res) => {
 // ✅ รัน Server (รองรับ Render Port)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 RaizenSHOP Server is running on port ${PORT}`));
+
 
 
 
