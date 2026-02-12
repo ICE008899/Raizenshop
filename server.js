@@ -304,7 +304,7 @@ app.get('/api/auth', (req, res) => {
         const dbStatus = row.status ? row.status.trim() : ''; 
 
         // 3. เงื่อนไข: ถ้าคีย์ว่าง หรือ HWID ตรงกัน (อนุญาตให้ผ่าน)
-        if (dbStatus === 'available' || dbStatus === '' || dbStatus === hwid) {
+        if (dbStatus === 'sold' || dbStatus === '' || dbStatus === hwid) {
             
             // อัปเดตสถานะในตารางหลัก (product_keys)
             db.query("UPDATE product_keys SET status = ? WHERE account_data = ?", [hwid, key], (updateErr) => {
@@ -337,6 +337,7 @@ app.get('/api/auth', (req, res) => {
 // ✅ รัน Server (รองรับ Render Port)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 RaizenSHOP Server is running on port ${PORT}`));
+
 
 
 
