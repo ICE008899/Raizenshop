@@ -275,7 +275,7 @@ app.post('/api/admin/reply-message', isAdmin, (req, res) => {
     });
 });
 // ==========================================
-// 🔐 API สำหรับเช็ค Key (ฉบับแก้ไขปัญหา UPDATE_FAILED)
+// 🔐 API สำหรับเช็ค Key (ฉบับแก้บั๊ก UPDATE_FAILED สมบูรณ์)
 // ==========================================
 app.get('/api/auth', (req, res) => {
     // 1. ตั้งค่า Header เป็น Text เสมอ
@@ -303,8 +303,8 @@ app.get('/api/auth', (req, res) => {
         const row = results[0];
         const dbStatus = row.status ? row.status.trim() : ''; 
 
-        // 3. เงื่อนไข: ถ้าคีย์ว่าง หรือ HWID ตรงกัน (อนุญาตให้ผ่าน)
-        if (dbStatus === 'sold' || dbStatus === '' || dbStatus === hwid) {
+        // 3. เงื่อนไข: รองรับทั้ง sold, available, ค่าว่าง หรือ HWID ตรงกัน
+        if (dbStatus === 'sold' || dbStatus === 'available' || dbStatus === '' || dbStatus === hwid) {
             
             // อัปเดตสถานะในตารางหลัก (product_keys)
             db.query("UPDATE product_keys SET status = ? WHERE account_data = ?", [hwid, key], (updateErr) => {
@@ -313,17 +313,21 @@ app.get('/api/auth', (req, res) => {
                     return res.send("UPDATE_FAILED");
                 }
 
-                // ✅ ส่ง SUCCESS กลับไปทันทีที่ตารางหลักอัปเดตสำเร็จ
+                // ✅ ตอบ SUCCESS ทันทีเพื่อให้โปรแกรมลูกค้าทำงานต่อได้ (เข้าหน้าเมนู)
                 res.send("SUCCESS");
 
-                // 📝 บันทึกประวัติลงตาราง hwid_logs แยกไว้เป็นเบื้องหลัง (Background Task)
-                // เพื่อไม่ให้ ERROR ในตารางนี้ไปขัดขวางการเข้าใช้งานของผู้ใช้
+                // 📝 บันทึกประวัติลงตาราง hwid_logs แบบระบุชื่อคอลัมน์ (เพื่อป้องกันปัญหาชื่อไม่ตรง)
                 const parts = hwid.split('-');
-                const pcName = parts.length > 1 ? parts[1] : 'Unknown PC';
+                const pcName = parts.length > 1 ? parts[1] : 'Unknown';
                 
-                db.query("INSERT INTO hwid_logs (license_key, hwid, computer_name) VALUES (?, ?, ?)", 
-                [key, hwid, pcName], (logErr) => {
-                    if (logErr) console.error("⚠️ Log Insert Error (Ignored):", logErr.message);
+                const logSql = "INSERT INTO hwid_logs (license_key, hwid, computer_name) VALUES (?, ?, ?)";
+                db.query(logSql, [key, hwid, pcName], (logErr) => {
+                    if (logErr) {
+                        // ถ้าบันทึก Log ไม่เข้า ให้ขึ้นเตือนใน Console แต่ไม่ต้องส่ง Error กลับไปหาลูกค้า
+                        console.error("⚠️ Log Insert Error (Ignored):", logErr.message);
+                    } else {
+                        console.log(`✅ [LOG SUCCESS] Recorded for: ${hwid}`);
+                    }
                 });
             });
         } 
@@ -337,6 +341,7 @@ app.get('/api/auth', (req, res) => {
 // ✅ รัน Server (รองรับ Render Port)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 RaizenSHOP Server is running on port ${PORT}`));
+
 
 
 
