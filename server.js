@@ -274,7 +274,53 @@ app.post('/api/admin/reply-message', isAdmin, (req, res) => {
         res.json({ success: true, message: 'ตอบกลับสำเร็จ!' });
     });
 });
+// ==========================================
+// 🔐 API สำหรับเช็ค Key (ใช้แทน PHP)
+// ==========================================
+app.get('/api/auth', (req, res) => {
+    // รับค่าจาก Batch Script
+    const key = req.query.key;
+    const hwid = req.query.hwid;
+
+    // ตั้งค่า Header ให้ส่งกลับเป็น Text ธรรมดา (สำคัญมากสำหรับ Batch)
+    res.set('Content-Type', 'text/plain');
+
+    if (!key || !hwid) {
+        return res.send("EMPTY_INPUT");
+    }
+
+    // เช็คคีย์ใน Database
+    db.query("SELECT status FROM product_keys WHERE account_data = ? LIMIT 1", [key], (err, results) => {
+        if (err) {
+            console.error(err);
+            return res.send("DB_ERROR");
+        }
+
+        if (results.length > 0) {
+            const status = results[0].status;
+
+            // 1. ถ้าคีย์ว่าง (available) -> ให้ผูก HWID
+            if (status === 'available' || status === '') {
+                db.query("UPDATE product_keys SET status = ? WHERE account_data = ?", [hwid, key], (updateErr) => {
+                    if (updateErr) return res.send("UPDATE_FAILED");
+                    return res.send("SUCCESS");
+                });
+            } 
+            // 2. ถ้าคีย์เคยใช้แล้ว -> เช็คว่า HWID ตรงไหม
+            else if (status === hwid) {
+                return res.send("SUCCESS");
+            } 
+            // 3. ถ้าไม่ตรง
+            else {
+                return res.send("HWID_MISMATCH");
+            }
+        } else {
+            return res.send("INVALID_KEY");
+        }
+    });
+});
 
 // ✅ รัน Server (รองรับ Render Port)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 RaizenSHOP Server is running on port ${PORT}`));
+
