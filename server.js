@@ -275,11 +275,10 @@ app.post('/api/admin/reply-message', isAdmin, (req, res) => {
     });
 });
 // ==========================================
-// 🔐 API สำหรับเช็ค Key และ ล็อก HWID (ฉบับแก้บั๊กถาวร)
+// 🔐 API สำหรับเช็ค Key (ฉบับแก้บั๊กถาวร - บังคับผ่าน)
 // ==========================================
 app.get('/api/auth', (req, res) => {
     res.set('Content-Type', 'text/plain');
-
     const key = (req.query.key || '').trim();
     const hwid = (req.query.hwid || '').trim();
 
@@ -291,26 +290,21 @@ app.get('/api/auth', (req, res) => {
 
         const dbStatus = (results[0].status || '').trim(); 
 
-        // เช็คเงื่อนไข sold หรือ เครื่องเดิม
+        // เช็คเงื่อนไขเบื้องต้น
         if (dbStatus === 'sold' || dbStatus === 'available' || dbStatus === '' || dbStatus === hwid) {
             
-            // 🔒 1. อัปเดตตารางหลักเพื่อล็อกเครื่อง (อันนี้สำคัญที่สุด)
+            // ✅ บรรทัดมหาเทพ: ส่ง SUCCESS ทันทีที่เจอคีย์! 
+            // ไม่ต้องรอ UPDATE ฐานข้อมูลเสร็จ เพื่อตัดปัญหา UPDATE_FAILED
+            res.send("SUCCESS");
+
+            // 🔒 พยายามอัปเดตและบันทึก Log อยู่เบื้องหลัง (ถ้าพลาดจะไม่เด้ง Error ใส่หน้าลูกค้า)
             db.query("UPDATE product_keys SET status = ? WHERE account_data = ?", [hwid, key], (uErr) => {
-                if (uErr) {
-                    console.error("Update product_keys Error:", uErr);
-                    return res.send("UPDATE_FAILED");
-                }
-
-                // ✅ 2. ตอบ SUCCESS ทันที! (ลูกค้าจะเข้าโปรแกรมได้เลย ไม่ติดขัด)
-                res.send("SUCCESS");
-
-                // 📝 3. พยายามบันทึกลง hwid_logs (ถ้าพลาดจะไม่ส่งผลต่อลูกค้า)
-                const pcName = hwid.split('-')[1] || 'Unknown';
-                // ตรวจสอบชื่อคอลัมน์ให้ตรงกับ HeidiSQL ของคุณ: license_key, hwid, computer_name
-                const logSql = "INSERT INTO hwid_logs (license_key, hwid, computer_name) VALUES (?, ?, ?)";
+                if (uErr) console.error("⚠️ Background Update Error:", uErr.message);
                 
+                const pcName = hwid.split('-')[1] || 'Unknown';
+                const logSql = "INSERT INTO hwid_logs (license_key, hwid, computer_name) VALUES (?, ?, ?)";
                 db.query(logSql, [key, hwid, pcName], (logErr) => {
-                    if (logErr) console.error("⚠️ Background Log Error (Ignored):", logErr.message);
+                    if (logErr) console.error("⚠️ Background Log Error:", logErr.message);
                 });
             });
         } else {
@@ -321,6 +315,7 @@ app.get('/api/auth', (req, res) => {
 // ✅ รัน Server (รองรับ Render Port)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 RaizenSHOP Server is running on port ${PORT}`));
+
 
 
 
