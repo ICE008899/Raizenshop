@@ -275,59 +275,59 @@ app.post('/api/admin/reply-message', isAdmin, (req, res) => {
     });
 });
 // ==========================================
-// 🔐 API สำหรับเช็ค Key (ฉบับสมบูรณ์ & มี Log)
+// 🔐 API สำหรับเช็ค Key (บันทึกประวัติลง hwid_logs)
 // ==========================================
 app.get('/api/auth', (req, res) => {
-    // 1. ตั้งค่า Header เป็น Text ธรรมดา (สำคัญมากสำหรับ Batch)
+    // 1. ตั้งค่า Header เป็น Text (สำคัญสำหรับ Batch)
     res.set('Content-Type', 'text/plain');
 
-    // 2. รับค่าและตัดช่องว่างหัว-ท้ายออก (Trim) ป้องกัน Error โง่ๆ
     const key = req.query.key ? req.query.key.trim() : '';
     const hwid = req.query.hwid ? req.query.hwid.trim() : '';
 
-    // Log ให้แอดมินดูใน Render ว่าใครส่งอะไรมา
     console.log(`[AUTH CHECK] Key: ${key} | HWID: ${hwid}`);
 
-    if (!key || !hwid) {
-        return res.send("EMPTY_INPUT");
-    }
+    if (!key || !hwid) return res.send("EMPTY_INPUT");
 
-    // 3. ค้นหาคีย์ใน Database
+    // 2. ตรวจสอบคีย์ใน Database
     db.query("SELECT * FROM product_keys WHERE account_data = ? LIMIT 1", [key], (err, results) => {
         if (err) {
             console.error("[DB ERROR]", err);
             return res.send("DB_ERROR");
         }
 
-        // กรณี 1: ไม่พบคีย์ในระบบเลย (ต้องตอบ INVALID_KEY)
         if (results.length === 0) {
             console.log(`❌ [AUTH FAIL] Key not found: ${key}`);
             return res.send("INVALID_KEY");
         }
 
-        // ดึงสถานะคีย์ออกมา
         const row = results[0];
         const dbStatus = row.status ? row.status.trim() : ''; 
 
-        // กรณี 2: คีย์ว่าง (available) -> ให้ผูก HWID ทันที
-        if (dbStatus === 'available' || dbStatus === '') {
+        // 3. เงื่อนไข: ถ้าคีย์ว่าง หรือ HWID ตรงกัน (ยอมรับให้ผ่าน)
+        if (dbStatus === 'available' || dbStatus === '' || dbStatus === hwid) {
+            
+            // อัปเดตสถานะในตารางหลัก (product_keys)
             db.query("UPDATE product_keys SET status = ? WHERE account_data = ?", [hwid, key], (updateErr) => {
-                if (updateErr) {
-                    console.error("[UPDATE ERROR]", updateErr);
-                    return res.send("UPDATE_FAILED");
-                }
-                console.log(`✅ [AUTH SUCCESS] New Device Bound: ${hwid}`);
-                return res.send("SUCCESS");
+                if (updateErr) return res.send("UPDATE_FAILED");
+
+                // 🔥 ส่วนที่เพิ่ม: บันทึกประวัติลงตาราง hwid_logs ทุกครั้งที่ล็อกอินสำเร็จ
+                const logSql = "INSERT INTO hwid_logs (license_key, hwid, computer_name) VALUES (?, ?, ?)";
+                
+                // แยกชื่อเครื่องจาก HWID (กรณีใช้รูปแบบ PC-NAME-USER)
+                const parts = hwid.split('-');
+                const pcName = parts.length > 1 ? parts[1] : 'Unknown';
+                
+                db.query(logSql, [key, hwid, pcName], (logErr) => {
+                    if (logErr) console.error("⚠️ Log Insert Error:", logErr);
+                    
+                    console.log(`✅ [AUTH SUCCESS] Logged for: ${hwid}`);
+                    return res.send("SUCCESS");
+                });
             });
         } 
-        // กรณี 3: คีย์เคยใช้แล้ว และ HWID ตรงกัน (ผ่าน)
-        else if (dbStatus === hwid) {
-            console.log(`✅ [AUTH SUCCESS] HWID Matched.`);
-            return res.send("SUCCESS");
-        } 
-        // กรณี 4: คีย์เคยใช้แล้ว แต่ HWID ไม่ตรง (ไม่ผ่าน)
+        // กรณี HWID ไม่ตรง (มีการย้ายเครื่องโดยไม่ได้รับอนุญาต)
         else {
-            console.log(`⛔ [AUTH DENIED] HWID Mismatch! DB: ${dbStatus} vs Client: ${hwid}`);
+            console.log(`⛔ [AUTH DENIED] HWID Mismatch!`);
             return res.send("HWID_MISMATCH");
         }
     });
@@ -335,5 +335,6 @@ app.get('/api/auth', (req, res) => {
 // ✅ รัน Server (รองรับ Render Port)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 RaizenSHOP Server is running on port ${PORT}`));
+
 
 
