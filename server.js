@@ -275,10 +275,10 @@ app.post('/api/admin/reply-message', isAdmin, (req, res) => {
     });
 });
 // ==========================================
-// 🔐 API สำหรับเช็ค Key (บันทึกประวัติลง hwid_logs)
+// 🔐 API สำหรับเช็ค Key (ฉบับแก้ไขปัญหา UPDATE_FAILED)
 // ==========================================
 app.get('/api/auth', (req, res) => {
-    // 1. ตั้งค่า Header เป็น Text (สำคัญสำหรับ Batch)
+    // 1. ตั้งค่า Header เป็น Text เสมอ
     res.set('Content-Type', 'text/plain');
 
     const key = req.query.key ? req.query.key.trim() : '';
@@ -303,29 +303,31 @@ app.get('/api/auth', (req, res) => {
         const row = results[0];
         const dbStatus = row.status ? row.status.trim() : ''; 
 
-        // 3. เงื่อนไข: ถ้าคีย์ว่าง หรือ HWID ตรงกัน (ยอมรับให้ผ่าน)
+        // 3. เงื่อนไข: ถ้าคีย์ว่าง หรือ HWID ตรงกัน (อนุญาตให้ผ่าน)
         if (dbStatus === 'available' || dbStatus === '' || dbStatus === hwid) {
             
             // อัปเดตสถานะในตารางหลัก (product_keys)
             db.query("UPDATE product_keys SET status = ? WHERE account_data = ?", [hwid, key], (updateErr) => {
-                if (updateErr) return res.send("UPDATE_FAILED");
+                if (updateErr) {
+                    console.error("[UPDATE ERROR]", updateErr);
+                    return res.send("UPDATE_FAILED");
+                }
 
-                // 🔥 ส่วนที่เพิ่ม: บันทึกประวัติลงตาราง hwid_logs ทุกครั้งที่ล็อกอินสำเร็จ
-                const logSql = "INSERT INTO hwid_logs (license_key, hwid, computer_name) VALUES (?, ?, ?)";
-                
-                // แยกชื่อเครื่องจาก HWID (กรณีใช้รูปแบบ PC-NAME-USER)
+                // ✅ ส่ง SUCCESS กลับไปทันทีที่ตารางหลักอัปเดตสำเร็จ
+                res.send("SUCCESS");
+
+                // 📝 บันทึกประวัติลงตาราง hwid_logs แยกไว้เป็นเบื้องหลัง (Background Task)
+                // เพื่อไม่ให้ ERROR ในตารางนี้ไปขัดขวางการเข้าใช้งานของผู้ใช้
                 const parts = hwid.split('-');
-                const pcName = parts.length > 1 ? parts[1] : 'Unknown';
+                const pcName = parts.length > 1 ? parts[1] : 'Unknown PC';
                 
-                db.query(logSql, [key, hwid, pcName], (logErr) => {
-                    if (logErr) console.error("⚠️ Log Insert Error:", logErr);
-                    
-                    console.log(`✅ [AUTH SUCCESS] Logged for: ${hwid}`);
-                    return res.send("SUCCESS");
+                db.query("INSERT INTO hwid_logs (license_key, hwid, computer_name) VALUES (?, ?, ?)", 
+                [key, hwid, pcName], (logErr) => {
+                    if (logErr) console.error("⚠️ Log Insert Error (Ignored):", logErr.message);
                 });
             });
         } 
-        // กรณี HWID ไม่ตรง (มีการย้ายเครื่องโดยไม่ได้รับอนุญาต)
+        // กรณีคีย์ถูกผูกกับเครื่องอื่นไปแล้ว
         else {
             console.log(`⛔ [AUTH DENIED] HWID Mismatch!`);
             return res.send("HWID_MISMATCH");
@@ -335,6 +337,7 @@ app.get('/api/auth', (req, res) => {
 // ✅ รัน Server (รองรับ Render Port)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 RaizenSHOP Server is running on port ${PORT}`));
+
 
 
 
