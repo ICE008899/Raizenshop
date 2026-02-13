@@ -311,7 +311,10 @@ app.get('/api/auth', (req, res) => {
         }
     });
 });
+// อนุญาตให้เข้าถึงโฟลเดอร์ img
+app.use('/img', express.static('img'));
 
 // ✅ รัน Server (รองรับ Render Port)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 RaizenSHOP Server is running on port ${PORT}`));
+
